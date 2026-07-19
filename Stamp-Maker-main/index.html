@@ -1,0 +1,2814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Oshiri Stamp Maker Pro v5.6 (Integrated Progress)</title>
+<!-- 
+  License Information:
+  - gif.js: MIT License (https://github.com/jnordberg/gif.js)
+  - Tailwind CSS: MIT License
+  - Google Fonts: Open Font License
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Noto+Sans+JP:wght@700;900&family=Rampart+One&family=Reggae+One&family=RocknRoll+One&display=swap" rel="stylesheet">
+<style>
+:root {
+    --theme-color: #9146FF;
+    --theme-text-color: #ffffff;
+    --twitch-bg: #0e0e10;
+    --panel-bg: #18181b;
+    --border-color: #2f2f35;
+}
+body {
+    background-color: var(--twitch-bg);
+    color: #efeff1;
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* カーソルオーバーライド */
+button:disabled, input:disabled, select:disabled, 
+.toggle-checkbox:disabled + .toggle-label,
+.ui-locked {
+    cursor: default !important;
+}
+.cursor-crosshair { cursor: crosshair !important; }
+
+/* Info Box */
+.info-box {
+    background: #0e0e10;
+    border-top: 1px solid #27272a;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #888;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+.info-box.active {
+    border-left-color: var(--theme-color);
+    color: #ddd;
+    background: #18181b;
+}
+
+/* NAVIGATOR */
+.navigator-area.drag-active {
+    box-shadow: inset 0 0 0 2px var(--theme-color);
+    background: rgba(0,0,0,0.5);
+}
+.navigator-area.drag-active::after {
+    content: 'ファイルをドロップして追加・置換';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--theme-color);
+    font-weight: 900;
+    font-size: 18px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    pointer-events: none;
+    z-index: 50;
+    white-space: nowrap;
+}
+
+.navigator-area {
+    background: radial-gradient(circle at center, #1f1f23 0%, #0e0e10 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    touch-action: none;
+}
+
+.nav-content-wrapper {
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    display: block;
+    line-height: 0;
+}
+
+#navVideo, #navImage {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    user-select: none;
+    object-fit: fill;
+}
+
+#navBox {
+    position: absolute;
+    border: 2px solid #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+    z-index: 10;
+    cursor: move;
+    box-shadow: 0 0 0 4000px rgba(0,0,0,0.5);
+    touch-action: none;
+}
+.resize-handle {
+    position: absolute;
+    width: 24px; height: 24px;
+    background: #ff4444;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    z-index: 20;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+#handle-se { bottom: -12px; right: -12px; cursor: nwse-resize; }
+
+/* Preview Overlay */
+#livePreviewCanvas {
+    image-rendering: pixelated;
+    background: transparent;
+}
+
+#qualityPreviewImage {
+    position: absolute; top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    object-fit: fill; 
+    pointer-events: none; z-index: 15; 
+    display: none; opacity: 1.0;
+}
+#previewLoading {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px;
+    z-index: 30; font-size: 12px; font-weight: bold; color: #fff;
+    display: none; pointer-events: none;
+}
+
+/* Timeline */
+.timeline-container {
+    position: relative; height: 24px;
+    background: #000;
+    border-radius: 4px; cursor: crosshair; overflow: hidden; border: 1px solid #333;
+    touch-action: none;
+}
+.timeline-selection {
+    position: absolute; top: 0; bottom: 0; background: rgba(255, 255, 255, 0.1);
+    border-top: 2px solid var(--theme-color); border-bottom: 2px solid var(--theme-color);
+    cursor: grab;
+}
+.timeline-handle {
+    position: absolute; top: 0; bottom: 0; width: 12px;
+    cursor: ew-resize; z-index: 20; background: rgba(255,255,255,0.2);
+}
+.handle-left { left: 0; } .handle-right { right: 0; }
+.playhead {
+    position: absolute; top: 0; bottom: 0; width: 2px; background: #ff4444;
+    z-index: 15; pointer-events: none;
+}
+
+/* Image List */
+#imageListContainer {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 6px;
+    min-height: 44px;
+    align-items: center;
+    background-color: #050505;
+    border: 1px solid #27272a;
+    border-radius: 6px;
+}
+.sortable-item {
+    width: 32px; height: 32px; flex-shrink: 0; border-radius: 4px;
+    background: #000; border: 2px solid #333; cursor: grab;
+    position: relative; overflow: hidden; transition: transform 0.2s, border-color 0.2s;
+}
+.sortable-item:hover { border-color: #666; }
+.sortable-item.dragging { opacity: 0.5; border-color: var(--theme-color); cursor: grabbing; }
+.sortable-item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.sortable-index {
+    position: absolute; bottom: 0; right: 0; background: rgba(0,0,0,0.7);
+    color: #fff; font-size: 8px; padding: 1px 3px; border-top-left-radius: 4px; pointer-events: none;
+}
+.delete-btn {
+    position: absolute; top: 0; right: 0;
+    width: 12px; height: 12px;
+    background: rgba(0, 0, 0, 0.6); color: #fff;
+    font-size: 8px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 20;
+    border-bottom-left-radius: 4px;
+    transition: background 0.2s;
+}
+.delete-btn:hover { background: #ff4444; }
+
+/* Toast */
+.toast {
+    position: fixed; bottom: 40px; right: 40px;
+    background: #1f1f23; color: #fff; padding: 8px 16px; border-radius: 6px;
+    opacity: 0; transition: all 0.3s; z-index: 9999; font-size: 13px; font-weight: 600;
+    border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: none;
+    transform: translateY(20px);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { border-color: #ff4444; color: #ffcccc; }
+
+/* UI Parts */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+input[type=range] { -webkit-appearance: none; background: transparent; }
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; height: 10px; width: 10px; border-radius: 50%;
+    background: var(--theme-color); cursor: pointer; margin-top: -3px; border: 2px solid #fff;
+}
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%; height: 4px; cursor: pointer; background: #3f3f46; border-radius: 2px;
+}
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.toggle-checkbox:checked { right: 0; border-color: var(--theme-color); }
+.toggle-checkbox:checked + .toggle-label { background-color: var(--theme-color); }
+
+.toggle-checkbox:disabled + .toggle-label { background-color: #333; opacity: 0.5; cursor: not-allowed; }
+.toggle-checkbox:disabled { cursor: not-allowed; border-color: #444; }
+
+/* Platform Buttons */
+.platform-btn {
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: bold;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background: #0e0e10;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.platform-btn:hover { background: #27272a; color: #aaa; }
+.platform-btn.active {
+    background: var(--theme-color);
+    border-color: var(--theme-color);
+    color: var(--theme-text-color);
+    box-shadow: 0 0 10px var(--theme-color);
+}
+
+/* UI Locking */
+.ui-locked {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(0.8);
+    transition: all 0.3s;
+}
+.ui-locked .unlock-on-busy {
+    pointer-events: auto;
+    opacity: 1;
+    filter: none;
+    cursor: pointer;
+}
+</style>
+</head>
+<body class="flex flex-col h-screen bg-[#09090b]">
+<!-- Header -->
+<header class="h-10 border-b border-[#27272a] flex justify-between items-center bg-[#1f1f23] px-4 shrink-0 z-50">
+    <h1 class="text-sm font-bold flex items-center gap-2 text-gray-100">
+        <svg class="w-5 h-5" style="color: var(--theme-color)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 13v3c0 4-8 5-9 0-1-6 4-12 9-12s10 6 9 12c-1 5-9 4-9 0" />
+        </svg>
+        Stamp Maker <span class="text-[10px] bg-[#2d2d31] text-gray-400 px-1.5 py-0.5 rounded ml-1 border border-[#3f3f46]">PRO v5.6</span>
+    </h1>
+    
+    <div class="flex items-center gap-4">
+        <!-- Undo/Redo Controls -->
+        <div class="flex items-center gap-1">
+            <button id="undoBtn" class="p-1.5 text-gray-400 hover:text-white disabled:opacity-30 transition-colors rounded hover:bg-[#2d2d31]" disabled data-help="元に戻す (Ctrl+Z)">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+            </button>
+            <button id="redoBtn" class="p-1.5 text-gray-400 hover:text-white disabled:opacity-30 transition-colors rounded hover:bg-[#2d2d31]" disabled data-help="やり直す (Ctrl+Y)">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"></path></svg>
+            </button>
+        </div>
+        <div id="modeBadge" class="text-[10px] font-mono text-gray-500 bg-[#121214] px-2 py-1 rounded border border-[#27272a]" data-help="現在の編集モード (動画 または 画像)">IDLE</div>
+    </div>
+</header>
+
+<!-- Initial Upload View -->
+<div id="initialView" class="flex-1 flex flex-col items-center justify-center p-4">
+    <label id="mainDropZone" class="w-full max-w-lg h-64 border-2 border-dashed border-[#3f3f46] rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#18181b] transition-all group" style="border-color: #3f3f46;">
+        <input type="file" id="mainFileInput" accept="video/*, image/*" multiple class="hidden">
+        <div class="p-4 rounded-full bg-[#1f1f23] mb-3 group-hover:scale-110 transition duration-300">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+        </div>
+        <div class="text-lg font-bold text-gray-200">Drag & Drop</div>
+        <div class="text-xs text-gray-500 mt-1">Video or Images</div>
+    </label>
+</div>
+
+<!-- Editor View (Split Layout) -->
+<div id="editorView" class="hidden flex-1 h-full overflow-hidden flex-row">
+    
+    <!-- LEFT COLUMN: Navigator + Timeline + Settings -->
+    <div class="flex-1 flex flex-col min-w-0">
+        
+        <!-- Navigator Header (Color Fixed) -->
+        <div class="h-8 shrink-0 border-b border-[#27272a] bg-[#18181b] flex items-center px-2 justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5" style="color: var(--theme-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span class="text-[10px] font-bold text-gray-400">NAVIGATOR</span>
+            </div>
+        </div>
+
+        <!-- TOP: Navigator (Flex-1 to take remaining space) -->
+        <div class="flex-1 min-h-0 navigator-area relative group" id="navArea" data-help="プレビューエリア。枠をドラッグして切り抜き。ファイルをドロップして追加・置換。">
+            <div class="nav-content-wrapper" id="navContainer">
+                <video id="navVideo" muted playsinline></video>
+                <img id="navImage" alt="">
+                
+                <!-- Red Box -->
+                <div id="navBox">
+                    <div id="handle-se" class="resize-handle" data-help="ドラッグして切り抜きサイズを変更"></div>
+                    
+                    <!-- Text Realtime Preview Layer (Canvas) -->
+                    <div id="textPreviewLayer" class="absolute top-0 left-0 w-full h-full pointer-events-none hidden z-20">
+                        <canvas id="textPreviewCanvas" class="w-full h-full"></canvas>
+                    </div>
+
+                    <!-- Live Preview Canvas (New) -->
+                    <canvas id="livePreviewCanvas" class="absolute top-0 left-0 w-full h-full pointer-events-none z-10 object-fill"></canvas>
+
+                    <!-- Quality Preview Overlay (Hidden by default) -->
+                    <img id="qualityPreviewImage" class="hidden">
+                    <div id="previewLoading">PREVIEW...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIDDLE: Timeline -->
+        <div id="timelineWrapper" class="shrink-0 bg-[#09090b] border-t border-[#27272a] p-1 z-30">
+            <div id="videoTimelineArea" class="hidden px-2">
+                <div class="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                    <span>TIMELINE</span>
+                    <span id="timeDisplay" class="text-white font-mono">0.0s - 1.0s</span>
+                </div>
+                <div class="timeline-container w-full" id="timeline" data-help="ドラッグで範囲選択。端をドラッグでサイズ変更。クリックで再生位置移動。">
+                    <div id="playhead" class="playhead"></div>
+                    <div id="timelineSelection" class="timeline-selection" style="left: 0%; width: 20%;">
+                        <div class="timeline-handle handle-left" data-handle="left"></div>
+                        <div class="timeline-handle handle-right" data-handle="right"></div>
+                    </div>
+                </div>
+                <div class="text-right"><span class="text-[9px]" style="color: var(--theme-color)" id="maxDurationDisplay">Max 1.0s</span></div>
+            </div>
+
+            <div id="imageListArea" class="hidden px-2">
+                <div class="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                    <span>ORDER</span>
+                    <span id="imageCountDisplay" class="text-white">0 Images</span>
+                </div>
+                <div id="imageListContainer" class="custom-scrollbar w-full" data-help="ドラッグで並び替え。「×」で削除。"></div>
+            </div>
+        </div>
+
+        <!-- BOTTOM: Settings (Expanded Height) -->
+        <div id="settingsPanel" class="shrink-0 bg-[#18181b] border-t border-[#27272a] p-2 overflow-y-auto custom-scrollbar" style="height: 320px;">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 h-full">
+                
+                <!-- Col 1: Output Settings -->
+                <div class="flex flex-col h-full gap-1">
+                    <div class="flex items-center justify-between mb-0.5 h-6">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" style="color: var(--theme-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            <span class="text-[10px] font-bold text-gray-400">OUTPUT</span>
+                        </div>
+                        <div class="flex gap-0.5" id="platformSelector">
+                            <button class="platform-btn active" data-platform="twitch" data-help="Twitchスタンプ (112px, 最大1MB)">Twitch</button>
+                            <button class="platform-btn" data-platform="kick" data-help="Kickスタンプ (500px)">Kick</button>
+                            <button class="platform-btn" data-platform="youtube" data-help="YouTubeスタンプ (480px)">YouTube</button>
+                            <button class="platform-btn" data-platform="free" data-help="制限なし (自由設定)">Free</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1 flex-1">
+                        <div class="flex items-center gap-2 border-b border-[#2f2f35] pb-1 mb-0.5">
+                            <div class="w-12 shrink-0">
+                                <label class="text-[9px] font-bold text-gray-500 block mb-0.5">SIZE</label>
+                                <input type="number" id="sizeInput" value="112" step="1" min="16" max="112" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="出力サイズ (ピクセル)">
+                            </div>
+                            <div class="flex-1 flex items-end h-full pb-0.5">
+                                <label class="flex items-center gap-1.5 cursor-pointer select-none opacity-50" id="originalSizeLabel" data-help="元の解像度を使用">
+                                    <input type="checkbox" id="originalSizeToggle" disabled class="rounded bg-[#0e0e10] border-[#333] focus:ring-0 w-3 h-3 cursor-pointer" style="color: var(--theme-color)">
+                                    <span class="text-[9px] font-bold text-gray-400">Original</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div class="w-12 shrink-0">
+                                <label class="text-[9px] font-bold text-gray-500 block mb-0.5">FPS</label>
+                                <input type="number" id="fpsInput" value="30" step="0.1" min="1" max="60" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="フレームレート (FPS)">
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[9px] font-bold text-gray-500 block mb-0.5">PRESET</label>
+                                <select id="fpsSelect" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded px-1 py-0.5" data-help="FPSプリセット選択">
+                                    <option value="60">60 FPS</option>
+                                    <option value="30" selected>30 FPS</option>
+                                    <option value="20">20 FPS</option>
+                                    <option value="15">15 FPS</option>
+                                    <option value="10">10 FPS</option>
+                                    <option value="5">5 FPS</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[9px] font-bold text-gray-500 block mb-0.5">SEC</label>
+                                <input type="number" id="durationInput" value="1.0" step="0.1" min="0.1" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="合計時間 (秒)">
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-bold text-gray-500 block mb-0.5">FRAMES</label>
+                                <input type="number" id="framesInput" value="30" step="1" min="1" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="合計フレーム数">
+                            </div>
+                        </div>
+                        
+                        <div id="extendFramesContainer" class="flex items-center justify-between bg-[#0e0e10] p-1 rounded border border-[#333]" data-help="時間を埋めるように画像を伸縮">
+                            <span class="text-[9px] text-gray-400 font-bold ml-1">Stretch</span>
+                            <div class="relative w-6 h-3">
+                                <input type="checkbox" id="extendFramesToggle" checked class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
+                                <label for="extendFramesToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
+                            </div>
+                        </div>
+
+                        <div id="pingPongContainer" class="flex items-center justify-between bg-[#0e0e10] p-1 rounded border border-[#333] mt-1 hidden" data-help="往復再生 (ピンポン再生)">
+                            <span class="text-[9px] text-gray-400 font-bold ml-1">Ping-Pong</span>
+                            <div class="relative w-6 h-3">
+                                <input type="checkbox" id="pingPongToggle" class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
+                                <label for="pingPongToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2 mt-1">
+                            <div class="flex-1">
+                                <label class="text-[9px] font-bold text-gray-500 block mb-0.5">QUALITY</label>
+                                <select id="qualitySelect" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded px-1 py-0.5" data-help="GIF画質 (高品質は処理が遅くなります)">
+                                    <option value="1" selected>High</option>
+                                    <option value="10">Normal</option>
+                                    <option value="20">Low</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end pb-1">
+                                <label class="flex items-center gap-1 cursor-pointer select-none" data-help="ディザリングを有効化 (グラデーションを滑らかに)">
+                                    <input type="checkbox" id="ditherToggle" class="rounded bg-[#0e0e10] border-[#333] focus:ring-0 w-3 h-3 cursor-pointer" style="color: var(--theme-color)">
+                                    <span class="text-[9px] font-bold text-gray-400">Dither</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Col 2: Image Adjustment -->
+                <div class="flex flex-col h-full gap-1">
+                    <div class="flex items-center justify-between mb-0.5 h-6">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" style="color: var(--theme-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            <span class="text-[10px] font-bold text-gray-400">ADJUSTMENT</span>
+                        </div>
+                        <div class="flex items-center gap-1.5" data-help="正方形以外の比率を許可">
+                            <span class="text-[9px] font-bold text-gray-500">Free Aspect</span>
+                            <div class="relative w-6 h-3">
+                                <input type="checkbox" id="freeAspectToggle" disabled class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
+                                <label for="freeAspectToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] font-bold text-gray-500 w-6">BRT</span>
+                            <input type="range" id="brightnessSlider" min="0" max="200" value="100" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="明るさ (Brightness)">
+                            <input type="number" id="brightnessInput" value="100" min="0" max="200" class="w-7 bg-transparent text-[9px] font-mono text-gray-400 text-right focus:outline-none focus:text-white border-b border-transparent focus:border-theme-color">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] font-bold text-gray-500 w-6">CON</span>
+                            <input type="range" id="contrastSlider" min="0" max="200" value="100" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="コントラスト (Contrast)">
+                            <input type="number" id="contrastInput" value="100" min="0" max="200" class="w-7 bg-transparent text-[9px] font-mono text-gray-400 text-right focus:outline-none focus:text-white border-b border-transparent focus:border-theme-color">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] font-bold text-gray-500 w-6">SAT</span>
+                            <input type="range" id="saturateSlider" min="0" max="200" value="100" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="彩度 (Saturation)">
+                            <input type="number" id="saturateInput" value="100" min="0" max="200" class="w-7 bg-transparent text-[9px] font-mono text-gray-400 text-right focus:outline-none focus:text-white border-b border-transparent focus:border-theme-color">
+                        </div>
+
+                        <div class="border-t border-[#2f2f35] mt-1.5 pt-1.5">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[9px] font-bold text-gray-500">CHROMA KEY</span>
+                                    <div class="relative w-6 h-3" data-help="背景透過 (クロマキー) を有効化">
+                                        <input type="checkbox" id="chromaToggle" class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
+                                        <label for="chromaToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button id="eyeDropperBtn" class="p-1 rounded border border-[#333] bg-[#0e0e10] text-gray-400 hover:text-white hover:bg-[#27272a] disabled:opacity-30 transition-colors" disabled data-help="プレビューをクリックして色を取得">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                    </button>
+                                    <input type="color" id="chromaColorPicker" value="#00FF00" class="w-5 h-4 bg-transparent border-0 p-0 cursor-pointer" disabled data-help="透過する色を選択">
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[9px] font-bold text-gray-500 w-8">THR</span>
+                                <input type="range" id="chromaThreshold" min="0" max="100" value="20" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" disabled data-help="色の許容範囲 (しきい値)">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[9px] font-bold text-gray-500 w-8">SMOOTH</span>
+                                <input type="range" id="chromaSmoothness" min="0" max="100" value="10" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" disabled data-help="境界線の滑らかさ">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Col 3: Text Settings -->
+                <div class="flex flex-col h-full gap-1">
+                    <div class="flex items-center justify-between mb-0.5 h-6">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" style="color: var(--theme-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7V4h16v3M9 20h6M12 4v16" />
+                            </svg>
+                            <span class="text-[10px] font-bold text-gray-400">TEXT</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="textCenterBtn" class="text-[9px] bg-[#27272a] hover:bg-[#333] text-gray-300 px-2 py-0.5 rounded border border-[#3f3f46] transition-colors" data-help="テキストを中央に戻す">
+                                Center
+                            </button>
+                            <div class="relative w-6 h-3" data-help="テキスト表示の切り替え">
+                                <input type="checkbox" id="textToggle" checked class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
+                                <label for="textToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1.5 flex-1">
+                        <div id="textControls" class="space-y-1.5 transition-opacity">
+                            <input type="text" id="textInput" placeholder="Enter text..." class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded px-2 py-1" data-help="テキスト内容を入力">
+                            
+                            <select id="textFontSelect" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded px-2 py-1" data-help="フォント選択">
+                                <option value='"MS Gothic", "ＭＳ ゴシック", "MS PGothic", "ＭＳ Ｐゴシック", sans-serif' selected>MS Gothic</option>
+                                <option value='"MS Mincho", "ＭＳ 明朝", "MS PMincho", "ＭＳ Ｐ明朝", serif'>MS Mincho</option>
+                                <option value="'Inter', sans-serif">Inter</option>
+                                <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
+                                <option value="'Reggae One', system-ui">Reggae One</option>
+                                <option value="'RocknRoll One', sans-serif">RocknRoll</option>
+                                <option value="'Rampart One', system-ui">Rampart One</option>
+                                <option value="Impact, sans-serif">Impact</option>
+                            </select>
+
+                            <div class="flex gap-2">
+                                <div class="flex-1">
+                                    <label class="text-[9px] font-bold text-gray-500 block mb-0.5">FILL</label>
+                                    <div class="flex items-center gap-1 bg-[#0e0e10] border border-[#333] rounded px-1 py-0.5" data-help="文字色 (Fill)">
+                                        <input type="color" id="textColor" value="#FFFFFF" class="w-4 h-4 bg-transparent border-0 p-0 cursor-pointer">
+                                        <span class="text-[9px] text-gray-400">Color</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[9px] font-bold text-gray-500 block mb-0.5">BORDER</label>
+                                    <div class="flex items-center gap-1 bg-[#0e0e10] border border-[#333] rounded px-1 py-0.5" data-help="縁取り色 (Border)">
+                                        <input type="color" id="textBorderColor" value="#000000" class="w-4 h-4 bg-transparent border-0 p-0 cursor-pointer">
+                                        <span class="text-[9px] text-gray-400">Color</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] font-bold text-gray-500 block mb-0.5">SIZE</label>
+                                    <input type="range" id="textSizeSlider" min="10" max="100" value="40" class="w-full h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="文字サイズ">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] font-bold text-gray-500 block mb-0.5">STROKE</label>
+                                    <input type="range" id="textStrokeSlider" min="0" max="20" value="4" class="w-full h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="縁取りの太さ">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-[9px] font-bold text-gray-500 block mb-0.5">POSITION (X / Y)</label>
+                                <div class="flex gap-2">
+                                    <input type="range" id="textPosX" min="0" max="100" value="50" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="水平位置 (X)">
+                                    <input type="range" id="textPosY" min="0" max="100" value="80" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="垂直位置 (Y)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Sidebar (Fixed width, Full height) -->
+    <div class="w-[280px] flex flex-col border-l border-[#27272a] bg-[#121214] shrink-0 z-40">
+        
+        <!-- History Header -->
+        <div class="px-3 py-2 bg-[#18181b] border-b border-[#27272a] flex justify-between items-center">
+            <span class="text-[10px] font-bold text-gray-400 tracking-wider">HISTORY</span>
+            <button id="clearHistoryBtn" class="text-[10px] text-gray-500 hover:text-white" data-help="生成履歴をすべて削除">CLEAR</button>
+        </div>
+
+        <!-- History List -->
+        <div id="resultList" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-[#0e0e10]" data-help="生成されたスタンプがここに表示されます。「DL」で保存。">
+            <div id="noStampsMsg" class="text-center mt-10 text-[10px] text-gray-600">No stamps</div>
+        </div>
+
+        <!-- Info Box (New) -->
+        <div id="infoBox" class="info-box">
+            各操作の上にマウスを乗せると説明が表示されます。
+        </div>
+
+        <!-- Actions -->
+        <div class="p-3 border-t border-[#27272a] space-y-2 bg-[#121214]">
+            <button id="playLoopBtn" class="w-full bg-[#27272a] hover:bg-[#333] text-white text-xs font-bold py-2.5 rounded border border-[#3f3f46] flex items-center justify-center gap-2 transition-colors" data-help="生成前にループアニメーションを確認">
+                <svg id="playIcon" class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> PREVIEW LOOP
+            </button>
+            
+            <!-- Modified Generate Button (Progress Integrated) -->
+            <button id="generateBtn" class="unlock-on-busy relative overflow-hidden w-full text-xs font-bold py-2.5 rounded shadow-lg flex items-center justify-center transition-colors" style="background-color: var(--theme-color); color: var(--theme-text-color);" data-help="GIFスタンプを生成してダウンロード">
+                <!-- Progress Bar Layer -->
+                <div id="btnProgress" class="absolute top-0 left-0 h-full transition-all duration-100 pointer-events-none" style="width: 0%; background-color: rgba(255,255,255,0.2);"></div>
+                
+                <!-- Text Layer -->
+                <span id="generateBtnText" class="relative z-10 flex items-center gap-2">
+                    CREATE STAMP
+                </span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Hidden Source Elements -->
+<video id="sourceVideo" class="hidden" muted playsinline></video>
+<img id="sourceImage" class="hidden">
+<script>
+// --- Init Worker ---
+let workerBlobURL = '';
+(async function initWorker() {
+try {
+const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+if (!res.ok) throw new Error('Network response was not ok');
+const code = await res.text();
+workerBlobURL = URL.createObjectURL(new Blob([code], { type: 'application/javascript' }));
+} catch(e) { 
+    console.error("Worker Init Failed:", e);
+    window.addEventListener('DOMContentLoaded', () => {
+        showToast("Error: GIFエンジンの読み込みに失敗しました。リロードしてください。", true);
+    });
+}
+})();
+
+// --- Configuration ---
+const APP_CONFIG = {
+MAX_FPS: 60,
+MIN_FPS: 1,
+DEFAULT_DURATION: 1.0,
+HANDLE_SIZE: 24,
+MIN_CROP_PX: 16,
+MAX_FILE_SIZE_MB: 1, // Output warning threshold
+MAX_INPUT_SIZE_MB: 50, // Input warning threshold
+MAX_TEXTURE_SIZE: 2048, // Max dimension for internal processing to prevent crash
+MAGIC_PINK: 0xFF00FF,
+WORKER_COUNT: navigator.hardwareConcurrency || 4,
+PLATFORMS: {
+    twitch: {
+        name: 'Twitch',
+        color: '#9146FF',
+        textColor: '#ffffff',
+        maxSize: 112,
+        maxFps: 60,
+        freeAspect: false
+    },
+    kick: {
+        name: 'Kick',
+        color: '#53FC18',
+        textColor: '#000000',
+        maxSize: 500,
+        maxFps: 60,
+        freeAspect: false
+    },
+    youtube: {
+        name: 'YouTube',
+        color: '#FF0000',
+        textColor: '#ffffff',
+        maxSize: 480,
+        maxFps: 60,
+        freeAspect: false
+    },
+    free: {
+        name: 'Free',
+        color: '#FFFFFF',
+        textColor: '#000000',
+        maxSize: 1024,
+        maxFps: 60,
+        freeAspect: true
+    }
+}
+};
+
+// --- Resource Management ---
+class ResourceManager {
+constructor() { this.urls = new Set(); }
+createURL(blobOrFile) {
+const url = URL.createObjectURL(blobOrFile);
+this.urls.add(url);
+return url;
+}
+revoke(url) {
+if (url && this.urls.has(url)) {
+URL.revokeObjectURL(url);
+this.urls.delete(url);
+} else if (url && url.startsWith('blob:')) {
+URL.revokeObjectURL(url);
+}
+}
+clearAll() {
+this.urls.forEach(url => URL.revokeObjectURL(url));
+this.urls.clear();
+}
+}
+const resourceManager = new ResourceManager();
+
+// --- Utilities ---
+function debounce(func, wait) {
+let timeout;
+return function(...args) {
+const context = this;
+clearTimeout(timeout);
+timeout = setTimeout(() => func.apply(context, args), wait);
+};
+}
+
+// --- DOM Elements ---
+const els = {
+initialView: document.getElementById('initialView'),
+editorView: document.getElementById('editorView'),
+settingsPanel: document.getElementById('settingsPanel'),
+timelineWrapper: document.getElementById('timelineWrapper'),
+mainDropZone: document.getElementById('mainDropZone'),
+mainFileInput: document.getElementById('mainFileInput'),
+
+navArea: document.getElementById('navArea'),
+navVideo: document.getElementById('navVideo'),
+navImage: document.getElementById('navImage'),
+navContainer: document.getElementById('navContainer'),
+navBox: document.getElementById('navBox'),
+navResizeHandle: document.getElementById('handle-se'),
+
+sourceVideo: document.getElementById('sourceVideo'),
+sourceImage: document.getElementById('sourceImage'),
+
+videoTimelineArea: document.getElementById('videoTimelineArea'),
+timeline: document.getElementById('timeline'),
+timelineSelection: document.getElementById('timelineSelection'),
+playhead: document.getElementById('playhead'),
+timeDisplay: document.getElementById('timeDisplay'),
+maxDurationDisplay: document.getElementById('maxDurationDisplay'),
+
+imageListArea: document.getElementById('imageListArea'),
+imageListContainer: document.getElementById('imageListContainer'),
+imageCountDisplay: document.getElementById('imageCountDisplay'),
+extendFramesContainer: document.getElementById('extendFramesContainer'),
+extendFramesToggle: document.getElementById('extendFramesToggle'),
+pingPongContainer: document.getElementById('pingPongContainer'),
+pingPongToggle: document.getElementById('pingPongToggle'),
+
+platformSelector: document.getElementById('platformSelector'),
+platformBtns: document.querySelectorAll('.platform-btn'),
+
+sizeInput: document.getElementById('sizeInput'),
+originalSizeToggle: document.getElementById('originalSizeToggle'),
+originalSizeLabel: document.getElementById('originalSizeLabel'),
+freeAspectToggle: document.getElementById('freeAspectToggle'),
+
+fpsInput: document.getElementById('fpsInput'),
+fpsSelect: document.getElementById('fpsSelect'),
+durationInput: document.getElementById('durationInput'),
+framesInput: document.getElementById('framesInput'),
+qualitySelect: document.getElementById('qualitySelect'),
+ditherToggle: document.getElementById('ditherToggle'),
+
+brightnessSlider: document.getElementById('brightnessSlider'),
+brightnessInput: document.getElementById('brightnessInput'),
+contrastSlider: document.getElementById('contrastSlider'),
+contrastInput: document.getElementById('contrastInput'),
+saturateSlider: document.getElementById('saturateSlider'),
+saturateInput: document.getElementById('saturateInput'),
+
+chromaToggle: document.getElementById('chromaToggle'),
+chromaColorPicker: document.getElementById('chromaColorPicker'),
+eyeDropperBtn: document.getElementById('eyeDropperBtn'),
+chromaThreshold: document.getElementById('chromaThreshold'),
+chromaSmoothness: document.getElementById('chromaSmoothness'),
+
+// Text Elements
+textToggle: document.getElementById('textToggle'),
+textControls: document.getElementById('textControls'),
+textInput: document.getElementById('textInput'),
+textFontSelect: document.getElementById('textFontSelect'),
+textColor: document.getElementById('textColor'),
+textBorderColor: document.getElementById('textBorderColor'),
+textSizeSlider: document.getElementById('textSizeSlider'),
+textStrokeSlider: document.getElementById('textStrokeSlider'),
+textPosX: document.getElementById('textPosX'),
+textPosY: document.getElementById('textPosY'),
+textPreviewLayer: document.getElementById('textPreviewLayer'),
+textPreviewCanvas: document.getElementById('textPreviewCanvas'),
+textCenterBtn: document.getElementById('textCenterBtn'),
+
+playLoopBtn: document.getElementById('playLoopBtn'),
+playIcon: document.getElementById('playIcon'),
+generateBtn: document.getElementById('generateBtn'),
+generateBtnText: document.getElementById('generateBtnText'),
+btnProgress: document.getElementById('btnProgress'),
+resultList: document.getElementById('resultList'),
+clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+modeBadge: document.getElementById('modeBadge'),
+
+qualityPreviewImage: document.getElementById('qualityPreviewImage'),
+previewLoading: document.getElementById('previewLoading'),
+livePreviewCanvas: document.getElementById('livePreviewCanvas'),
+
+undoBtn: document.getElementById('undoBtn'),
+redoBtn: document.getElementById('redoBtn'),
+infoBox: document.getElementById('infoBox')
+};
+
+let state = {
+mode: 'video', fps: 30, maxDuration: 1.0,
+cropW: 300, cropH: 300, posX: 0, posY: 0,
+videoDuration: 0, startTime: 0, endTime: 1.0,
+mediaWidth: 0, mediaHeight: 0,
+images: [],
+totalFrames: 30,
+extendFrames: true,
+pingPong: false,
+filters: { brightness: 100, contrast: 100, saturate: 100 },
+chromaKey: { enabled: false, color: '#00FF00', threshold: 20, smoothness: 10 },
+text: {
+enabled: true,
+content: '',
+font: '"MS Gothic", "ＭＳ ゴシック", "MS PGothic", "ＭＳ Ｐゴシック", sans-serif',
+color: '#FFFFFF',
+borderColor: '#000000',
+size: 40,
+stroke: 4,
+x: 50,
+y: 80
+},
+isDraggingText: false,
+isDraggingNav: false,
+isResizingNav: false,
+dither: false,
+isDraggingTimeline: false,
+dragStart: { x:0, y:0, posX:0, posY:0, width:0, scale:0, startPct:0, endPct:0 },
+isPlayingLoop: false, animationFrameId: null, loopStartTime: null,
+platformMode: 'twitch',
+useOriginalSize: false,
+freeAspect: false,
+isGenerating: false,
+abortController: null
+};
+
+// --- Image Processing (Advanced Chroma Key) ---
+function applyChromaKey(ctx, width, height, colorHex, threshold, smoothness, isRendering) {
+const imgData = ctx.getImageData(0, 0, width, height);
+const data = imgData.data;
+
+const rT = parseInt(colorHex.slice(1, 3), 16);
+const gT = parseInt(colorHex.slice(3, 5), 16);
+const bT = parseInt(colorHex.slice(5, 7), 16);
+
+const threshDist = threshold * 4.4;
+const smoothDist = smoothness * 2.0;
+const fullDist = threshDist + smoothDist;
+
+const mpR = (APP_CONFIG.MAGIC_PINK >> 16) & 0xFF;
+const mpG = (APP_CONFIG.MAGIC_PINK >> 8) & 0xFF;
+const mpB = APP_CONFIG.MAGIC_PINK & 0xFF;
+
+for (let i = 0; i < data.length; i += 4) {
+const r = data[i];
+const g = data[i + 1];
+const b = data[i + 2];
+
+const dist = Math.sqrt((r - rT) ** 2 + (g - gT) ** 2 + (b - bT) ** 2);
+
+if (dist < threshDist) {
+    if (isRendering) {
+        data[i] = mpR; data[i + 1] = mpG; data[i + 2] = mpB; data[i + 3] = 255;
+    } else {
+        data[i + 3] = 0;
+    }
+} else if (dist < fullDist && smoothDist > 0) {
+    if (isRendering) {
+        const prob = (dist - threshDist) / smoothDist;
+        if (Math.random() > prob) {
+            data[i] = mpR; data[i + 1] = mpG; data[i + 2] = mpB; data[i + 3] = 255;
+        }
+    } else {
+        const alpha = ((dist - threshDist) / smoothDist) * 255;
+        data[i + 3] = Math.floor(alpha);
+    }
+}
+}
+ctx.putImageData(imgData, 0, 0);
+}
+
+// --- Text Logic ---
+function getTextMetrics(ctx, width, height) {
+if (!state.text.content) return null;
+
+const fontSize = (state.text.size / 100) * height * 0.5;
+ctx.font = `900 ${fontSize}px ${state.text.font}`;
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+
+const metrics = ctx.measureText(state.text.content);
+const textW = metrics.width;
+const textH = fontSize;
+
+const x = (state.text.x / 100) * width;
+const y = (state.text.y / 100) * height;
+
+return {
+x: x, y: y,
+left: x - textW / 2,
+right: x + textW / 2,
+top: y - textH / 2,
+bottom: y + textH / 2,
+width: textW,
+height: textH,
+fontSize: fontSize
+};
+}
+
+function drawTextOverlay(ctx, width, height) {
+if (!state.text.enabled || !state.text.content) return;
+
+const m = getTextMetrics(ctx, width, height);
+if (!m) return;
+
+ctx.font = `900 ${m.fontSize}px ${state.text.font}`;
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.lineJoin = 'round';
+
+if (state.text.stroke > 0) {
+ctx.lineWidth = (state.text.stroke / 100) * m.fontSize * 0.5;
+ctx.strokeStyle = state.text.borderColor;
+ctx.strokeText(state.text.content, m.x, m.y);
+}
+
+ctx.fillStyle = state.text.color;
+ctx.fillText(state.text.content, m.x, m.y);
+
+if (state.isDraggingText) {
+ctx.lineWidth = 1;
+ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+ctx.setLineDash([4, 4]);
+ctx.strokeRect(m.left - 4, m.top - 4, m.width + 8, m.height + 8);
+ctx.setLineDash([]);
+}
+}
+
+function updateTextPreview() {
+if (!state.text.enabled || !state.text.content) {
+els.textPreviewLayer.classList.add('hidden');
+return;
+}
+els.textPreviewLayer.classList.remove('hidden');
+
+const canvas = els.textPreviewCanvas;
+const ctx = canvas.getContext('2d');
+const boxW = els.navBox.clientWidth;
+const boxH = els.navBox.clientHeight;
+
+if (canvas.width !== boxW || canvas.height !== boxH) {
+canvas.width = boxW; canvas.height = boxH;
+} else {
+ctx.clearRect(0, 0, boxW, boxH);
+}
+drawTextOverlay(ctx, boxW, boxH);
+}
+
+// --- Preview Controller (Optimized: Canvas Realtime Rendering) ---
+class PreviewController {
+    constructor() {
+        this.update = this._renderLivePreview.bind(this);
+        this.animationFrameId = null;
+    }
+
+    _renderLivePreview() {
+        if (state.isPlayingLoop) return;
+        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = requestAnimationFrame(() => this._draw());
+    }
+
+    _draw() {
+        const canvas = els.livePreviewCanvas;
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: true });
+        
+        const boxRect = els.navBox.getBoundingClientRect();
+        const width = Math.max(1, Math.floor(boxRect.width));
+        const height = Math.max(1, Math.floor(boxRect.height));
+
+        if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        ctx.clearRect(0, 0, width, height);
+        
+        let source = null;
+        if (state.mode === 'video') {
+            if (els.navVideo.readyState >= 2) source = els.navVideo;
+        } else {
+            if (els.sourceImage.complete) source = els.sourceImage;
+        }
+
+        if (!source) return;
+
+        const f = `brightness(${state.filters.brightness}%) contrast(${state.filters.contrast}%) saturate(${state.filters.saturate}%)`;
+        ctx.filter = f;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        const sx = state.posX;
+        const sy = state.posY;
+        const sw = state.cropW;
+        const sh = state.cropH;
+
+        try {
+            ctx.drawImage(source, sx, sy, sw, sh, 0, 0, width, height);
+        } catch (e) {
+            return;
+        }
+
+        if (state.chromaKey.enabled) {
+            ctx.filter = 'none';
+            applyChromaKey(ctx, width, height, state.chromaKey.color, state.chromaKey.threshold, state.chromaKey.smoothness, false);
+        }
+
+        ctx.filter = 'none';
+        drawTextOverlay(ctx, width, height);
+    }
+
+    clear() {
+        const canvas = els.livePreviewCanvas;
+        if(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+}
+const previewController = new PreviewController();
+
+// --- Class Based OOP: Input Handlers ---
+class InputHandler {
+constructor() {
+this.isDragging = false;
+}
+getPointerPos(e) {
+if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+return { x: e.clientX, y: e.clientY };
+}
+bindDrag(element, callbacks) {
+const { onStart, onMove, onEnd } = callbacks;
+const start = (e) => {
+if (e.button && e.button !== 0) return;
+if (e.cancelable && !e.target.closest('.timeline-container')) e.preventDefault();
+this.isDragging = true;
+const pos = this.getPointerPos(e);
+if (onStart) onStart(pos, e);
+};
+const move = (e) => {
+if (!this.isDragging) return;
+if (e.cancelable) e.preventDefault();
+const pos = this.getPointerPos(e);
+if (onMove) onMove(pos, e);
+};
+const end = (e) => {
+if (!this.isDragging) return;
+this.isDragging = false;
+if (onEnd) onEnd(e);
+};
+
+element.addEventListener('mousedown', start);
+element.addEventListener('touchstart', start, { passive: false });
+
+window.addEventListener('mousemove', move, { passive: false });
+window.addEventListener('mouseup', end);
+window.addEventListener('blur', end); // Window focus lost fix
+
+window.addEventListener('touchmove', move, { passive: false });
+window.addEventListener('touchend', end);
+window.addEventListener('touchcancel', end);
+}
+}
+
+// --- Help System ---
+class HelpSystem {
+    constructor() {
+        this.defaultText = "各操作の上にマウスを乗せると説明が表示されます。";
+        this.init();
+    }
+    
+    init() {
+        document.body.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('[data-help]');
+            if (target) {
+                this.show(target.getAttribute('data-help'));
+            }
+        });
+
+        document.body.addEventListener('mouseout', (e) => {
+            const target = e.target.closest('[data-help]');
+            if (target) {
+                this.reset();
+            }
+        });
+    }
+
+    show(text) {
+        if (els.infoBox.innerText !== text) {
+            els.infoBox.innerText = text;
+            els.infoBox.classList.add('active');
+        }
+    }
+
+    reset() {
+        els.infoBox.innerText = this.defaultText;
+        els.infoBox.classList.remove('active');
+    }
+}
+const helpSystem = new HelpSystem();
+
+// --- History Management (Undo/Redo) ---
+class HistoryManager {
+    constructor() {
+        this.stack = [];
+        this.pointer = -1;
+        this.maxHistory = 50;
+        this.locked = false;
+    }
+
+    createSnapshot() {
+        return JSON.parse(JSON.stringify({
+            cropW: state.cropW, cropH: state.cropH,
+            posX: state.posX, posY: state.posY,
+            startTime: state.startTime, endTime: state.endTime,
+            filters: state.filters,
+            chromaKey: state.chromaKey,
+            text: state.text,
+            fps: state.fps,
+            totalFrames: state.totalFrames,
+            platformMode: state.platformMode,
+            useOriginalSize: state.useOriginalSize,
+            freeAspect: state.freeAspect,
+            extendFrames: state.extendFrames,
+            pingPong: state.pingPong,
+            dither: state.dither,
+            images: state.images
+        }));
+    }
+
+    push() {
+        if (this.locked) return;
+        
+        const snapshot = this.createSnapshot();
+        
+        if (this.pointer < this.stack.length - 1) {
+            this.stack = this.stack.slice(0, this.pointer + 1);
+        }
+        
+        if (this.stack.length > 0) {
+            const prev = JSON.stringify(this.stack[this.stack.length - 1]);
+            if (prev === JSON.stringify(snapshot)) return;
+        }
+
+        this.stack.push(snapshot);
+        if (this.stack.length > this.maxHistory) this.stack.shift();
+        else this.pointer++;
+
+        this.updateUI();
+    }
+
+    undo() {
+        if (this.pointer > 0) {
+            this.pointer--;
+            this.restore(this.stack[this.pointer]);
+        }
+    }
+
+    redo() {
+        if (this.pointer < this.stack.length - 1) {
+            this.pointer++;
+            this.restore(this.stack[this.pointer]);
+        }
+    }
+
+    restore(snapshot) {
+        if (!snapshot) return;
+        
+        Object.assign(state, JSON.parse(JSON.stringify(snapshot)));
+        this.syncUI();
+        
+        updateNavBox();
+        updateFilterPreview();
+        updateTextPreview();
+        updateTimelineUI();
+        previewController.update();
+        updatePlatformUI();
+        
+        if (state.mode === 'image') {
+            els.imageListContainer.innerHTML = '';
+            state.images.forEach((imgData, idx) => {
+                const div = document.createElement('div'); div.className = 'sortable-item'; div.draggable = true;
+                div.innerHTML = `
+                <img src="${imgData.url}">
+                <div class="delete-btn">×</div>
+                <div class="sortable-index">${idx + 1}</div>
+                `;
+                div.querySelector('.delete-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteImage(div, imgData.url);
+                });
+                div.addEventListener('dragstart', function() { this.classList.add('dragging'); });
+                div.addEventListener('dragend', function() { this.classList.remove('dragging'); updateImageOrder(); });
+                div.addEventListener('dragover', e => e.preventDefault());
+                div.addEventListener('dragenter', function() {
+                    const dragging = document.querySelector('.dragging');
+                    if(dragging && dragging !== this) {
+                        const container = els.imageListContainer;
+                        const children = Array.from(container.children);
+                        if(children.indexOf(dragging) < children.indexOf(this)) container.insertBefore(dragging, this.nextSibling);
+                        else container.insertBefore(dragging, this);
+                    }
+                });
+                div.addEventListener('click', () => { els.navImage.src = imgData.url; els.sourceImage.src = imgData.url; });
+                els.imageListContainer.appendChild(div);
+            });
+            els.imageCountDisplay.innerText = `${state.images.length} Images`;
+            if(state.images.length > 0) {
+                els.navImage.src = state.images[0].url;
+                els.sourceImage.src = state.images[0].url;
+            }
+        } else {
+            els.sourceVideo.currentTime = state.startTime;
+            els.navVideo.currentTime = state.startTime;
+        }
+
+        this.updateUI();
+    }
+
+    syncUI() {
+        els.sizeInput.value = state.useOriginalSize ? Math.round(state.cropW) : (state.platformMode !== 'free' ? APP_CONFIG.PLATFORMS[state.platformMode].maxSize : 112);
+        els.fpsInput.value = state.fps;
+        els.durationInput.value = (state.endTime - state.startTime).toFixed(2);
+        els.framesInput.value = state.totalFrames;
+        
+        els.brightnessSlider.value = state.filters.brightness; els.brightnessInput.value = state.filters.brightness;
+        els.contrastSlider.value = state.filters.contrast; els.contrastInput.value = state.filters.contrast;
+        els.saturateSlider.value = state.filters.saturate; els.saturateInput.value = state.filters.saturate;
+        
+        els.chromaToggle.checked = state.chromaKey.enabled;
+        els.chromaColorPicker.value = state.chromaKey.color;
+        els.chromaThreshold.value = state.chromaKey.threshold;
+        els.chromaSmoothness.value = state.chromaKey.smoothness;
+        
+        els.chromaColorPicker.disabled = !state.chromaKey.enabled;
+        els.eyeDropperBtn.disabled = !state.chromaKey.enabled;
+        els.chromaThreshold.disabled = !state.chromaKey.enabled;
+        els.chromaSmoothness.disabled = !state.chromaKey.enabled;
+
+        els.textToggle.checked = state.text.enabled;
+        els.textInput.value = state.text.content;
+        els.textFontSelect.value = state.text.font;
+        els.textColor.value = state.text.color;
+        els.textBorderColor.value = state.text.borderColor;
+        els.textSizeSlider.value = state.text.size;
+        els.textStrokeSlider.value = state.text.stroke;
+        els.textPosX.value = state.text.x;
+        els.textPosY.value = state.text.y;
+        
+        els.textControls.classList.toggle('opacity-50', !state.text.enabled);
+        els.textControls.classList.toggle('pointer-events-none', !state.text.enabled);
+
+        els.extendFramesToggle.checked = state.extendFrames;
+        els.pingPongToggle.checked = state.pingPong;
+        els.ditherToggle.checked = state.dither;
+        els.originalSizeToggle.checked = state.useOriginalSize;
+        els.freeAspectToggle.checked = state.freeAspect;
+        
+        els.platformBtns.forEach(b => {
+            if(b.dataset.platform === state.platformMode) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+    }
+
+    updateUI() {
+        els.undoBtn.disabled = this.pointer <= 0;
+        els.redoBtn.disabled = this.pointer >= this.stack.length - 1;
+    }
+    
+    init() {
+        this.stack = [];
+        this.pointer = -1;
+        this.push();
+    }
+}
+const historyManager = new HistoryManager();
+
+class NavigatorController extends InputHandler {
+constructor() {
+super();
+this.dragData = { offsetX: 0, offsetY: 0, boxLeft: 0, boxTop: 0, mode: 'box' };
+this.init();
+}
+init() {
+this.bindDrag(els.navContainer, {
+onStart: (pos, e) => {
+if (colorPickerTool && colorPickerTool.isActive) return;
+if (e.target === els.navResizeHandle) return;
+
+previewController.clear();
+
+const boxRect = els.navBox.getBoundingClientRect();
+
+if (state.text.enabled && state.text.content) {
+const canvas = els.textPreviewCanvas;
+const ctx = canvas.getContext('2d');
+const m = getTextMetrics(ctx, canvas.width, canvas.height);
+
+if (m) {
+const localX = pos.x - boxRect.left;
+const localY = pos.y - boxRect.top;
+const padding = 10;
+
+if (localX >= m.left - padding && localX <= m.right + padding &&
+localY >= m.top - padding && localY <= m.bottom + padding) {
+
+this.dragData.mode = 'text';
+state.isDraggingText = true;
+this.dragData.offsetX = localX - m.x;
+this.dragData.offsetY = localY - m.y;
+els.navBox.style.cursor = 'move';
+updateTextPreview();
+return;
+}
+}
+}
+
+this.dragData.mode = 'box';
+// Hide preview while dragging box to see underlying video
+els.livePreviewCanvas.style.display = 'none';
+
+this.dragData.offsetX = pos.x - boxRect.left;
+this.dragData.offsetY = pos.y - boxRect.top;
+els.navBox.style.cursor = 'grabbing';
+
+state.isDraggingNav = true;
+els.navBox.style.boxShadow = 'none';
+els.navBox.style.border = '2px solid #ff4444';
+},
+onMove: (pos) => {
+if (state.isResizingNav) return;
+const boxRect = els.navBox.getBoundingClientRect();
+const boxW = boxRect.width;
+const boxH = boxRect.height;
+
+if (this.dragData.mode === 'text') {
+const localX = pos.x - boxRect.left;
+const localY = pos.y - boxRect.top;
+let newX = localX - this.dragData.offsetX;
+let newY = localY - this.dragData.offsetY;
+state.text.x = (newX / boxW) * 100;
+state.text.y = (newY / boxH) * 100;
+els.textPosX.value = state.text.x;
+els.textPosY.value = state.text.y;
+updateTextPreview();
+previewController.update();
+} else {
+const navW = els.navVideo.clientWidth || els.navImage.clientWidth;
+const navH = els.navVideo.clientHeight || els.navImage.clientHeight;
+if (!navW || !state.mediaWidth) return;
+const ratioX = navW / state.mediaWidth;
+const ratioY = navH / state.mediaHeight;
+const containerRect = els.navContainer.getBoundingClientRect();
+const newBoxLeft = pos.x - containerRect.left - this.dragData.offsetX;
+const newBoxTop = pos.y - containerRect.top - this.dragData.offsetY;
+state.posX = newBoxLeft / ratioX;
+state.posY = newBoxTop / ratioY;
+clampPos(); updateNavBox(); updateFilterPreview();
+}
+},
+onEnd: () => {
+if (this.dragData.mode === 'text') {
+state.isDraggingText = false;
+updateTextPreview();
+} else {
+state.isDraggingNav = false;
+els.navBox.style.boxShadow = '0 0 0 4000px rgba(0,0,0,0.5)';
+// Show preview again
+els.livePreviewCanvas.style.display = 'block';
+}
+els.navBox.style.cursor = 'move';
+this.dragData.mode = 'box';
+previewController.update();
+historyManager.push();
+}
+});
+
+const resizeHandler = new InputHandler();
+resizeHandler.bindDrag(els.navResizeHandle, {
+onStart: (pos, e) => {
+e.stopPropagation();
+previewController.clear();
+state.isResizingNav = true;
+els.navBox.style.boxShadow = 'none';
+// Hide preview while resizing
+els.livePreviewCanvas.style.display = 'none';
+
+const boxRect = els.navBox.getBoundingClientRect();
+const containerRect = els.navContainer.getBoundingClientRect();
+this.dragData.boxLeft = boxRect.left - containerRect.left;
+this.dragData.boxTop = boxRect.top - containerRect.top;
+},
+onMove: (pos) => {
+const navW = els.navVideo.clientWidth || els.navImage.clientWidth;
+const navH = els.navVideo.clientHeight || els.navImage.clientHeight;
+if (!navW) return;
+const ratioX = navW / state.mediaWidth;
+const ratioY = navH / state.mediaHeight;
+const containerRect = els.navContainer.getBoundingClientRect();
+const mouseX = pos.x - containerRect.left;
+const mouseY = pos.y - containerRect.top;
+let newBoxW = mouseX - this.dragData.boxLeft;
+let newBoxH = mouseY - this.dragData.boxTop;
+newBoxW = Math.max(APP_CONFIG.HANDLE_SIZE, newBoxW);
+newBoxH = Math.max(APP_CONFIG.HANDLE_SIZE, newBoxH);
+let newCropW = newBoxW / ratioX;
+let newCropH = newBoxH / ratioY;
+if (!state.freeAspect) {
+const size = Math.max(newCropW, newCropH);
+newCropW = size; newCropH = size;
+}
+newCropW = Math.min(newCropW, state.mediaWidth - state.posX);
+newCropH = Math.min(newCropH, state.mediaHeight - state.posY);
+if (!state.freeAspect) {
+const size = Math.min(newCropW, newCropH);
+newCropW = size; newCropH = size;
+}
+if (newCropW < APP_CONFIG.MIN_CROP_PX) newCropW = APP_CONFIG.MIN_CROP_PX;
+if (newCropH < APP_CONFIG.MIN_CROP_PX) newCropH = APP_CONFIG.MIN_CROP_PX;
+state.cropW = newCropW; state.cropH = newCropH;
+updateNavBox(); updateFilterPreview();
+
+if (state.useOriginalSize) {
+els.sizeInput.value = Math.round(state.cropW);
+}
+},
+onEnd: () => { 
+state.isResizingNav = false; 
+els.navBox.style.boxShadow = '0 0 0 4000px rgba(0,0,0,0.5)';
+// Show preview again
+els.livePreviewCanvas.style.display = 'block';
+previewController.update(); 
+historyManager.push();
+}
+});
+}
+}
+
+// --- Color Picker Tool (New Implementation) ---
+class ColorPickerTool {
+    constructor() {
+        this.isActive = false;
+        this.btn = els.eyeDropperBtn;
+        this.init();
+    }
+
+    init() {
+        this.btn.addEventListener('click', () => this.toggle());
+        
+        // プレビューエリアクリック時の処理 (captureフェーズで捕捉してドラッグを阻止)
+        els.navContainer.addEventListener('click', (e) => {
+            if (!this.isActive) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this.pickColor(e);
+            this.deactivate();
+        }, { capture: true });
+    }
+
+    toggle() {
+        if (this.isActive) this.deactivate();
+        else this.activate();
+    }
+
+    activate() {
+        this.isActive = true;
+        // ボタンのアクティブ表示
+        this.btn.style.backgroundColor = 'var(--theme-color)';
+        this.btn.style.color = 'var(--theme-text-color)';
+        this.btn.style.borderColor = 'var(--theme-color)';
+        
+        // カーソル変更
+        els.navBox.classList.add('cursor-crosshair');
+        els.navContainer.style.cursor = 'crosshair';
+        
+        showToast("プレビュー画面をクリックして色を取得");
+    }
+
+    deactivate() {
+        this.isActive = false;
+        // ボタンのスタイルリセット
+        this.btn.style.backgroundColor = '';
+        this.btn.style.color = '';
+        this.btn.style.borderColor = '';
+        
+        els.navBox.classList.remove('cursor-crosshair');
+        els.navContainer.style.cursor = '';
+    }
+
+    pickColor(e) {
+        const canvas = els.livePreviewCanvas;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Canvasの表示サイズと内部解像度の比率を計算
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        const ctx = canvas.getContext('2d');
+        try {
+            // 1x1ピクセルのデータを取得
+            const pixel = ctx.getImageData(x * scaleX, y * scaleY, 1, 1).data;
+            
+            // RGBをHexに変換
+            const toHex = (n) => n.toString(16).padStart(2, '0');
+            const hex = `#${toHex(pixel[0])}${toHex(pixel[1])}${toHex(pixel[2])}`;
+
+            // 状態更新
+            state.chromaKey.color = hex;
+            els.chromaColorPicker.value = hex;
+            
+            // プレビュー更新
+            previewController.update();
+            historyManager.push();
+            showToast(`色を取得しました: ${hex}`);
+        } catch (err) {
+            console.error("Color pick failed:", err);
+            showToast("色の取得に失敗しました", true);
+        }
+    }
+}
+const colorPickerTool = new ColorPickerTool();
+
+// --- Event Listeners ---
+els.mainFileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+const handleDrag = (e) => { e.preventDefault(); e.stopPropagation(); };
+window.addEventListener('dragover', handleDrag); window.addEventListener('drop', handleDrag);
+els.mainDropZone.addEventListener('drop', e => { handleFiles(e.dataTransfer.files); });
+
+// NAVIGATOR Drag & Drop Logic
+els.navArea.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    els.navArea.classList.add('drag-active');
+});
+
+els.navArea.addEventListener('dragleave', e => {
+    if (e.relatedTarget && els.navArea.contains(e.relatedTarget)) return;
+    els.navArea.classList.remove('drag-active');
+});
+
+els.navArea.addEventListener('drop', e => {
+    e.preventDefault();
+    els.navArea.classList.remove('drag-active');
+    
+    const files = e.dataTransfer.files;
+    if(!files || !files.length) return;
+
+    if (state.mode === 'image' && files[0].type.startsWith('image')) {
+        loadImages(files, true);
+    } else {
+        handleFiles(files);
+    }
+});
+
+els.extendFramesToggle.addEventListener('change', e => {
+state.extendFrames = e.target.checked;
+if (!state.extendFrames && state.mode === 'image') {
+state.totalFrames = Math.max(1, state.images.length);
+els.framesInput.value = state.totalFrames;
+els.framesInput.disabled = true;
+els.framesInput.classList.add('opacity-50');
+} else {
+els.framesInput.disabled = false;
+els.framesInput.classList.remove('opacity-50');
+}
+updateConfig('frames');
+});
+
+els.pingPongToggle.addEventListener('change', e => {
+state.pingPong = e.target.checked;
+});
+
+els.sizeInput.addEventListener('input', function() {
+if (state.platformMode !== 'free') {
+const max = APP_CONFIG.PLATFORMS[state.platformMode].maxSize;
+if (parseInt(this.value) > max) this.value = max;
+}
+});
+els.fpsInput.addEventListener('input', function() {
+if (state.platformMode !== 'free') {
+const max = APP_CONFIG.PLATFORMS[state.platformMode].maxFps;
+if (parseFloat(this.value) > max) this.value = max;
+}
+});
+els.framesInput.addEventListener('input', function() {
+if (state.platformMode !== 'free') {
+const max = APP_CONFIG.PLATFORMS[state.platformMode].maxFps;
+if (parseInt(this.value) > max) this.value = max;
+}
+});
+
+// Platform Switching Logic
+els.platformBtns.forEach(btn => {
+btn.addEventListener('click', () => {
+const platform = btn.dataset.platform;
+setPlatform(platform);
+setTimeout(() => historyManager.push(), 10);
+});
+});
+
+function setPlatform(platformName) {
+state.platformMode = platformName;
+const config = APP_CONFIG.PLATFORMS[platformName];
+
+document.documentElement.style.setProperty('--theme-color', config.color);
+document.documentElement.style.setProperty('--theme-text-color', config.textColor);
+
+els.platformBtns.forEach(b => {
+if(b.dataset.platform === platformName) b.classList.add('active');
+else b.classList.remove('active');
+});
+
+if (!state.isGenerating) {
+els.generateBtn.style.backgroundColor = config.color;
+els.generateBtn.style.color = config.textColor;
+if(els.btnProgress) els.btnProgress.style.backgroundColor = 'rgba(255,255,255,0.2)';
+}
+
+updatePlatformUI();
+}
+
+els.originalSizeToggle.addEventListener('change', e => {
+state.useOriginalSize = e.target.checked;
+if (state.useOriginalSize) {
+els.sizeInput.disabled = true;
+els.sizeInput.classList.add('opacity-50');
+} else {
+els.sizeInput.disabled = false;
+els.sizeInput.classList.remove('opacity-50');
+}
+});
+
+els.freeAspectToggle.addEventListener('change', e => {
+state.freeAspect = e.target.checked;
+if(!state.freeAspect) {
+const size = Math.min(state.cropW, state.cropH);
+state.cropW = size; state.cropH = size;
+updateNavBox();
+}
+});
+
+if(els.clearHistoryBtn) {
+els.clearHistoryBtn.addEventListener('click', () => {
+const imgs = els.resultList.querySelectorAll('img');
+imgs.forEach(img => resourceManager.revoke(img.src));
+els.resultList.innerHTML = '';
+const div = document.createElement('div');
+div.id = "noStampsMsg";
+div.className = "text-center mt-10 text-[10px] text-gray-600";
+div.innerText = "No stamps";
+els.resultList.appendChild(div);
+});
+}
+
+function updatePlatformUI() {
+const config = APP_CONFIG.PLATFORMS[state.platformMode];
+const isRestricted = state.platformMode !== 'free';
+
+if (isRestricted) {
+els.sizeInput.max = config.maxSize;
+els.sizeInput.value = config.maxSize;
+
+state.useOriginalSize = false;
+els.originalSizeToggle.checked = false;
+els.originalSizeToggle.disabled = true;
+els.originalSizeLabel.classList.add('opacity-50');
+
+els.freeAspectToggle.disabled = true;
+els.freeAspectToggle.checked = false;
+state.freeAspect = false;
+
+const size = Math.min(state.cropW, state.cropH);
+state.cropW = size; state.cropH = size;
+updateNavBox();
+
+els.sizeInput.disabled = false;
+els.sizeInput.classList.remove('opacity-50');
+} else {
+els.sizeInput.removeAttribute('max');
+els.originalSizeToggle.disabled = false;
+els.originalSizeLabel.classList.remove('opacity-50');
+els.freeAspectToggle.disabled = false;
+
+state.useOriginalSize = true;
+els.originalSizeToggle.checked = true;
+els.sizeInput.disabled = true;
+els.sizeInput.classList.add('opacity-50');
+if (state.cropW) {
+els.sizeInput.value = Math.round(state.cropW);
+}
+}
+
+if (isRestricted) {
+els.fpsInput.max = config.maxFps;
+if (parseFloat(els.fpsInput.value) > config.maxFps) {
+els.fpsInput.value = config.maxFps;
+updateConfig('fps');
+}
+els.framesInput.max = config.maxFps;
+if (parseInt(els.framesInput.value) > config.maxFps) {
+els.framesInput.value = config.maxFps;
+updateConfig('frames');
+}
+} else {
+els.fpsInput.removeAttribute('max');
+els.framesInput.removeAttribute('max');
+}
+}
+
+setPlatform('twitch');
+
+// --- Loading Logic ---
+function handleFiles(files) {
+if(!files || !files.length) return;
+const file = files[0];
+
+// File Size Check
+const sizeMB = file.size / (1024 * 1024);
+if (sizeMB > APP_CONFIG.MAX_INPUT_SIZE_MB) {
+    showToast(`Warning: Large file (${sizeMB.toFixed(1)}MB). May be slow.`, true);
+}
+
+const isVideo = file.type.startsWith('video');
+state.mode = isVideo ? 'video' : 'image';
+resourceManager.clearAll(); // Clear previous session
+if (isVideo) loadVideo(file); else loadImages(files, false);
+}
+
+function loadVideo(file) {
+if (els.navVideo.src) resourceManager.revoke(els.navVideo.src);
+
+const url = resourceManager.createURL(file);
+els.navVideo.src = url; els.sourceVideo.src = url;
+els.navVideo.onloadedmetadata = () => {
+state.videoDuration = els.navVideo.duration;
+state.mediaWidth = els.navVideo.videoWidth; state.mediaHeight = els.navVideo.videoHeight;
+els.initialView.classList.add('hidden'); els.editorView.classList.remove('hidden'); els.editorView.classList.add('flex');
+
+els.navVideo.style.display = 'block'; els.navImage.style.display = 'none';
+els.videoTimelineArea.style.display = 'block'; els.imageListArea.style.display = 'none';
+els.extendFramesContainer.style.display = 'none';
+els.pingPongContainer.classList.add('hidden');
+els.modeBadge.innerText = "VIDEO MODE";
+
+state.fps = 30;
+state.startTime = 0;
+state.endTime = Math.min(state.videoDuration, 1.0);
+state.totalFrames = Math.round(state.fps * (state.endTime - state.startTime));
+
+els.fpsInput.value = 30; els.fpsSelect.value = 30;
+els.durationInput.value = (state.endTime - state.startTime).toFixed(2);
+els.framesInput.value = state.totalFrames;
+
+fitNavigatorToScreen();
+autoMaximizeCrop(); updateTimelineUI(); showToast("Video Loaded");
+
+// Auto Loop Start
+if(!state.isPlayingLoop) togglePlayLoop();
+historyManager.init();
+};
+els.sourceVideo.currentTime = 0;
+}
+
+// Memory Safe Image Loader
+async function resizeImageIfNeeded(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            const max = APP_CONFIG.MAX_TEXTURE_SIZE;
+            let w = img.naturalWidth;
+            let h = img.naturalHeight;
+            
+            if (w <= max && h <= max) {
+                URL.revokeObjectURL(url);
+                resolve(resourceManager.createURL(file)); // Use original
+                return;
+            }
+
+            // Resize logic
+            if (w > h) {
+                if (w > max) { h = Math.round(h * (max / w)); w = max; }
+            } else {
+                if (h > max) { w = Math.round(w * (max / h)); h = max; }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            
+            canvas.toBlob((blob) => {
+                URL.revokeObjectURL(url);
+                resolve(resourceManager.createURL(blob));
+            }, file.type);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(null);
+        };
+        img.src = url;
+    });
+}
+
+async function loadImages(files, isAppend) {
+if(!isAppend) {
+state.images.forEach(img => resourceManager.revoke(img.url));
+state.images = [];
+els.imageListContainer.innerHTML = '';
+}
+let loadedCount = 0;
+for (let i = 0; i < files.length; i++) {
+if(!files[i].type.startsWith('image')) continue;
+
+// Use safe loader
+const url = await resizeImageIfNeeded(files[i]);
+if (!url) continue;
+
+state.images.push({ url: url });
+
+const div = document.createElement('div'); div.className = 'sortable-item'; div.draggable = true;
+div.innerHTML = `
+<img src="${url}">
+<div class="delete-btn">×</div>
+<div class="sortable-index">${state.images.length}</div>
+`;
+
+div.querySelector('.delete-btn').addEventListener('click', (e) => {
+e.stopPropagation();
+deleteImage(div, url);
+});
+
+div.addEventListener('dragstart', function() { this.classList.add('dragging'); });
+div.addEventListener('dragend', function() { this.classList.remove('dragging'); updateImageOrder(); });
+div.addEventListener('dragover', e => e.preventDefault());
+div.addEventListener('dragenter', function() {
+const dragging = document.querySelector('.dragging');
+if(dragging && dragging !== this) {
+const container = els.imageListContainer;
+const children = Array.from(container.children);
+if(children.indexOf(dragging) < children.indexOf(this)) container.insertBefore(dragging, this.nextSibling);
+else container.insertBefore(dragging, this);
+}
+});
+div.addEventListener('click', () => { els.navImage.src = url; els.sourceImage.src = url; });
+
+els.imageListContainer.appendChild(div);
+loadedCount++;
+}
+
+if (state.images.length > 0) {
+const img = new Image(); img.src = state.images[0].url;
+await new Promise(r => img.onload = r);
+state.mediaWidth = img.naturalWidth; state.mediaHeight = img.naturalHeight;
+els.navImage.src = state.images[0].url; els.sourceImage.src = state.images[0].url;
+
+els.initialView.classList.add('hidden'); els.editorView.classList.remove('hidden'); els.editorView.classList.add('flex');
+els.navVideo.style.display = 'none'; els.navImage.style.display = 'block';
+els.videoTimelineArea.style.display = 'none'; els.imageListArea.style.display = 'block';
+els.extendFramesContainer.style.display = 'flex';
+els.pingPongContainer.classList.remove('hidden');
+els.modeBadge.innerText = "IMAGE MODE";
+
+if(!isAppend) {
+state.fps = 30; state.totalFrames = 30;
+els.fpsInput.value = 30; els.fpsSelect.value = 30;
+els.durationInput.value = "1.00";
+els.framesInput.value = 30;
+autoMaximizeCrop();
+}
+
+if (!state.extendFrames) {
+state.totalFrames = state.images.length;
+els.framesInput.value = state.totalFrames;
+updateConfig('frames');
+}
+
+fitNavigatorToScreen();
+els.imageCountDisplay.innerText = `${state.images.length} Images`;
+showToast(`${loadedCount} Images Added`);
+
+// Auto Loop Start
+if(!state.isPlayingLoop) togglePlayLoop();
+if(!isAppend) historyManager.init();
+else historyManager.push();
+}
+}
+
+function deleteImage(divElement, url) {
+const container = els.imageListContainer;
+if(divElement.parentNode === container) {
+container.removeChild(divElement);
+}
+// Don't revoke URL here to allow Undo
+// resourceManager.revoke(url);
+
+updateImageOrder();
+els.imageCountDisplay.innerText = `${state.images.length} Images`;
+
+if(state.images.length === 0) {
+els.navImage.src = ''; els.sourceImage.src = '';
+} else {
+els.navImage.src = state.images[0].url; els.sourceImage.src = state.images[0].url;
+}
+
+if (!state.extendFrames && state.mode === 'image') {
+state.totalFrames = Math.max(1, state.images.length);
+els.framesInput.value = state.totalFrames;
+updateConfig('frames');
+}
+historyManager.push();
+}
+
+function updateImageOrder() {
+const newImages = [];
+Array.from(els.imageListContainer.children).forEach((div, idx) => {
+const imgUrl = div.querySelector('img').src;
+newImages.push({ url: imgUrl });
+div.querySelector('.sortable-index').innerText = idx + 1;
+});
+state.images = newImages;
+}
+
+// --- Config Logic ---
+els.fpsInput.addEventListener('change', () => updateConfig('fps'));
+els.fpsSelect.addEventListener('change', () => { els.fpsInput.value = els.fpsSelect.value; updateConfig('fps'); });
+els.durationInput.addEventListener('change', () => updateConfig('duration'));
+els.framesInput.addEventListener('change', () => updateConfig('frames'));
+
+function updateConfig(source) {
+let fps = parseFloat(els.fpsInput.value);
+if (isNaN(fps) || fps <= 0) fps = 30;
+
+let duration = parseFloat(els.durationInput.value);
+if (isNaN(duration) || duration <= 0) duration = 1.0;
+
+let frames = parseInt(els.framesInput.value);
+if (isNaN(frames) || frames <= 0) frames = 30;
+
+if (fps > 60) fps = 60;
+if (duration < 0.01) duration = 0.01;
+
+if (state.mode === 'image' && !state.extendFrames) {
+frames = Math.max(1, state.images.length);
+els.framesInput.value = frames;
+if (source === 'duration') {
+fps = frames / duration;
+} else {
+duration = frames / fps;
+}
+} else {
+if (source === 'fps') {
+frames = Math.round(fps * duration);
+} else if (source === 'duration') {
+frames = Math.round(fps * duration);
+if (state.mode === 'video') {
+const maxAllowed = state.videoDuration - state.startTime;
+if (duration > maxAllowed) {
+duration = maxAllowed;
+frames = Math.round(fps * duration);
+}
+state.endTime = state.startTime + duration;
+updateTimelineUI();
+}
+} else if (source === 'frames') {
+duration = frames / fps;
+if (state.mode === 'video') {
+const maxAllowed = state.videoDuration - state.startTime;
+if (duration > maxAllowed) {
+duration = maxAllowed;
+frames = Math.round(fps * duration);
+}
+state.endTime = state.startTime + duration;
+updateTimelineUI();
+}
+}
+}
+
+if (state.platformMode !== 'free') {
+const maxFps = APP_CONFIG.PLATFORMS[state.platformMode].maxFps;
+if (frames > maxFps) {
+frames = maxFps;
+duration = frames / fps;
+if (state.mode === 'video') {
+state.endTime = state.startTime + duration;
+updateTimelineUI();
+}
+}
+}
+
+state.fps = fps;
+state.totalFrames = frames;
+
+els.fpsInput.value = Math.round(fps * 100) / 100;
+els.durationInput.value = duration.toFixed(2);
+els.framesInput.value = frames;
+
+if (state.mode === 'video') {
+state.maxDuration = 60 / state.fps;
+els.maxDurationDisplay.innerText = `Max ${state.maxDuration.toFixed(1)}s (Ref)`;
+}
+}
+
+// --- Navigator Logic ---
+function fitNavigatorToScreen() {
+if (!state.mediaWidth || !state.mediaHeight) return;
+const areaW = els.navArea.clientWidth - 40;
+const areaH = els.navArea.clientHeight - 40;
+if (areaW <= 0 || areaH <= 0) return;
+
+const mediaRatio = state.mediaWidth / state.mediaHeight;
+const areaRatio = areaW / areaH;
+let finalW, finalH;
+
+if (areaRatio > mediaRatio) {
+finalH = areaH; finalW = finalH * mediaRatio;
+} else {
+finalW = areaW; finalH = finalW / mediaRatio;
+}
+els.navContainer.style.width = `${finalW}px`;
+els.navContainer.style.height = `${finalH}px`;
+updateNavBox();
+}
+window.addEventListener('resize', () => { fitNavigatorToScreen(); });
+
+function autoMaximizeCrop() {
+if (!state.mediaWidth) return;
+let size = Math.min(state.mediaWidth, state.mediaHeight);
+state.cropW = size;
+state.cropH = size;
+state.posX = (state.mediaWidth - size) / 2;
+state.posY = (state.mediaHeight - size) / 2;
+updateNavBox(); updateFilterPreview();
+
+// Ensure preview is drawn initially
+setTimeout(() => previewController.update(), 100);
+
+if (state.useOriginalSize) {
+els.sizeInput.value = Math.round(state.cropW);
+}
+}
+
+function clampPos() {
+if(!state.mediaWidth) return;
+const maxX = state.mediaWidth - state.cropW;
+const maxY = state.mediaHeight - state.cropH;
+state.posX = Math.max(0, Math.min(state.posX, maxX));
+state.posY = Math.max(0, Math.min(state.posY, maxY));
+}
+
+function updateNavBox() {
+if(!state.mediaWidth) return;
+const navW = els.navVideo.clientWidth || els.navImage.clientWidth; const navH = els.navVideo.clientHeight || els.navImage.clientHeight;
+if(!navW) return;
+const ratioX = navW / state.mediaWidth; const ratioY = navH / state.mediaHeight;
+const boxLeft = state.posX * ratioX;
+const boxTop = state.posY * ratioY;
+const boxW = state.cropW * ratioX;
+const boxH = state.cropH * ratioY;
+els.navBox.style.left = `${boxLeft}px`; els.navBox.style.top = `${boxTop}px`;
+els.navBox.style.width = `${boxW}px`; els.navBox.style.height = `${boxH}px`;
+
+updateTextPreview();
+}
+
+function updateFilterPreview() {
+const f = `brightness(${state.filters.brightness}%) contrast(${state.filters.contrast}%) saturate(${state.filters.saturate}%)`;
+if (state.mode === 'video') els.sourceVideo.style.filter = f; else els.sourceImage.style.filter = f;
+els.navVideo.style.filter = f; els.navImage.style.filter = f;
+}
+
+const navigatorController = new NavigatorController();
+
+// Updated Slider Binding with Input Sync
+const bindSliderWithInput = (sliderEl, inputEl, key) => {
+    // Slider -> Input & State
+    sliderEl.addEventListener('input', e => {
+        const val = e.target.value;
+        state.filters[key] = val;
+        if(inputEl) inputEl.value = val;
+        updateFilterPreview();
+        previewController.update();
+    });
+    
+    // Input -> Slider & State
+    if(inputEl) {
+        inputEl.addEventListener('input', e => {
+            let val = parseInt(e.target.value);
+            if(isNaN(val)) return; // Don't update state on empty/invalid
+            // Clamp
+            const min = parseInt(sliderEl.min);
+            const max = parseInt(sliderEl.max);
+            if(val < min) val = min;
+            if(val > max) val = max;
+            
+            state.filters[key] = val;
+            sliderEl.value = val;
+            updateFilterPreview();
+            previewController.update();
+        });
+        // Reset on blur if empty
+        inputEl.addEventListener('change', e => {
+            if(e.target.value === '') {
+                e.target.value = state.filters[key];
+            }
+        });
+    }
+};
+
+bindSliderWithInput(els.brightnessSlider, els.brightnessInput, 'brightness');
+bindSliderWithInput(els.contrastSlider, els.contrastInput, 'contrast');
+bindSliderWithInput(els.saturateSlider, els.saturateInput, 'saturate');
+
+// --- Chroma Key & Dither Events ---
+els.chromaToggle.addEventListener('change', e => {
+state.chromaKey.enabled = e.target.checked;
+els.chromaColorPicker.disabled = !state.chromaKey.enabled;
+els.eyeDropperBtn.disabled = !state.chromaKey.enabled;
+els.chromaThreshold.disabled = !state.chromaKey.enabled;
+els.chromaSmoothness.disabled = !state.chromaKey.enabled;
+
+if (!state.chromaKey.enabled && colorPickerTool.isActive) {
+    colorPickerTool.deactivate();
+}
+previewController.update();
+});
+els.chromaColorPicker.addEventListener('input', e => {
+state.chromaKey.color = e.target.value;
+previewController.update();
+});
+els.chromaThreshold.addEventListener('input', e => {
+state.chromaKey.threshold = parseInt(e.target.value);
+previewController.update();
+});
+els.chromaSmoothness.addEventListener('input', e => {
+state.chromaKey.smoothness = parseInt(e.target.value);
+previewController.update();
+});
+els.ditherToggle.addEventListener('change', e => {
+state.dither = e.target.checked;
+previewController.update();
+});
+
+// --- Text UI Events ---
+els.textToggle.addEventListener('change', e => {
+state.text.enabled = e.target.checked;
+els.textControls.classList.toggle('opacity-50', !state.text.enabled);
+els.textControls.classList.toggle('pointer-events-none', !state.text.enabled);
+updateTextPreview();
+previewController.update();
+});
+
+// Text Center Button
+if(els.textCenterBtn) {
+    els.textCenterBtn.addEventListener('click', () => {
+        if(!state.text.enabled) return;
+        state.text.x = 50;
+        state.text.y = 50;
+        els.textPosX.value = 50;
+        els.textPosY.value = 50;
+        updateTextPreview();
+        previewController.update();
+        historyManager.push();
+    });
+}
+
+const bindText = (el, key, isNum = false) => el.addEventListener('input', e => {
+state.text[key] = isNum ? parseInt(e.target.value) : e.target.value;
+updateTextPreview();
+previewController.update();
+});
+
+bindText(els.textInput, 'content');
+bindText(els.textColor, 'color');
+bindText(els.textBorderColor, 'borderColor');
+bindText(els.textSizeSlider, 'size', true);
+bindText(els.textStrokeSlider, 'stroke', true);
+bindText(els.textPosX, 'x', true);
+bindText(els.textPosY, 'y', true);
+
+els.textFontSelect.addEventListener('change', e => {
+state.text.font = e.target.value;
+updateTextPreview();
+previewController.update();
+});
+
+// --- Timeline ---
+els.timeline.addEventListener('mousedown', e => {
+if(state.mode !== 'video') return;
+state.isDraggingTimeline = true;
+const rect = els.timeline.getBoundingClientRect();
+const clickPct = ((e.clientX - rect.left) / rect.width) * 100;
+
+if(e.target.classList.contains('handle-left')) {
+state.dragStart = { mode: 'resize-left', startPct: (state.startTime / state.videoDuration) * 100, endPct: (state.endTime / state.videoDuration) * 100, x: e.clientX };
+} else if(e.target.classList.contains('handle-right')) {
+state.dragStart = { mode: 'resize-right', startPct: (state.startTime / state.videoDuration) * 100, endPct: (state.endTime / state.videoDuration) * 100, x: e.clientX };
+} else if(e.target.classList.contains('timeline-selection') || e.target.closest('.timeline-selection')) {
+state.dragStart = { mode: 'move', startPct: (state.startTime / state.videoDuration) * 100, endPct: (state.endTime / state.videoDuration) * 100, x: e.clientX };
+} else {
+const time = (clickPct / 100) * state.videoDuration;
+state.startTime = time;
+state.endTime = time;
+state.dragStart = { mode: 'create', startX: e.clientX, startTime: time };
+updateTimelineUI();
+els.sourceVideo.currentTime = time;
+els.navVideo.currentTime = time;
+}
+});
+
+window.addEventListener('mousemove', e => { 
+    if(state.isDraggingTimeline) {
+        handleTimelineMove(e); 
+    }
+});
+window.addEventListener('mouseup', () => { 
+    if(state.isDraggingTimeline) {
+        state.isDraggingTimeline = false;
+        historyManager.push();
+    }
+});
+window.addEventListener('blur', () => { state.isDraggingTimeline = false; });
+
+function handleTimelineMove(e) {
+    const rect = els.timeline.getBoundingClientRect();
+    
+    // プラットフォーム制限の計算
+    let maxDurationPct = 100; // デフォルトは制限なし(100%)
+    if (state.platformMode !== 'free') {
+        const config = APP_CONFIG.PLATFORMS[state.platformMode];
+        // maxFpsの値を「最大フレーム数」として扱う (例: Twitchなら60フレーム)
+        const maxFrames = config.maxFps; 
+        // 現在のFPS設定に基づいて、最大秒数を計算
+        const maxDurationSec = maxFrames / state.fps;
+        // 動画全体の長さに対する割合(%)に変換
+        maxDurationPct = (maxDurationSec / state.videoDuration) * 100;
+    }
+
+    if (state.dragStart.mode === 'create') {
+        const currentPct = ((e.clientX - rect.left) / rect.width);
+        // マウス位置の時間
+        let currentTime = Math.max(0, Math.min(state.videoDuration, currentPct * state.videoDuration));
+        
+        let newStart = Math.min(state.dragStart.startTime, currentTime);
+        let newEnd = Math.max(state.dragStart.startTime, currentTime);
+        
+        // 制限チェック: 幅が最大許容幅を超えていたら、ドラッグしている側を縮める
+        const currentDurationSec = newEnd - newStart;
+        const maxDurationSec = (maxDurationPct / 100) * state.videoDuration;
+        
+        if (currentDurationSec > maxDurationSec) {
+            if (currentTime > state.dragStart.startTime) {
+                // 右に伸ばしている場合、Endを制限
+                newEnd = newStart + maxDurationSec;
+            } else {
+                // 左に伸ばしている場合、Startを制限
+                newStart = newEnd - maxDurationSec;
+            }
+        }
+
+        state.startTime = newStart;
+        state.endTime = newEnd;
+        
+        const newDuration = state.endTime - state.startTime;
+        els.durationInput.value = newDuration.toFixed(2);
+        state.totalFrames = Math.round(state.fps * newDuration);
+        els.framesInput.value = state.totalFrames;
+        updateTimelineUI();
+        return;
+    }
+
+    // Resize / Move モード
+    const deltaPct = ((e.clientX - state.dragStart.x) / rect.width) * 100;
+    let newStart = state.dragStart.startPct; 
+    let newEnd = state.dragStart.endPct;
+
+    if (state.dragStart.mode === 'resize-left') {
+        newStart += deltaPct; 
+        // 最小幅チェック (0.5%)
+        newStart = Math.min(newStart, newEnd - 0.5); 
+        // 最大幅チェック (制限がある場合、Endから最大幅分引いた位置より左に行かせない)
+        if (state.platformMode !== 'free') {
+            newStart = Math.max(newStart, newEnd - maxDurationPct);
+        }
+        newStart = Math.max(0, newStart);
+
+    } else if (state.dragStart.mode === 'resize-right') {
+        newEnd += deltaPct; 
+        // 最小幅チェック
+        newEnd = Math.max(newEnd, newStart + 0.5); 
+        // 最大幅チェック (制限がある場合、Startから最大幅分足した位置より右に行かせない)
+        if (state.platformMode !== 'free') {
+            newEnd = Math.min(newEnd, newStart + maxDurationPct);
+        }
+        newEnd = Math.min(100, newEnd);
+
+    } else if (state.dragStart.mode === 'move') {
+        const width = newEnd - newStart; 
+        newStart += deltaPct; 
+        newEnd = newStart + width;
+        
+        // 移動の場合は幅が変わらないので最大幅チェックは不要だが、画面端のチェックは必要
+        if(newStart < 0) { newStart = 0; newEnd = width; } 
+        if(newEnd > 100) { newEnd = 100; newStart = 100 - width; }
+    }
+
+    state.startTime = (newStart / 100) * state.videoDuration;
+    state.endTime = (newEnd / 100) * state.videoDuration;
+    
+    updateTimelineUI(); 
+    els.sourceVideo.currentTime = state.startTime;
+    els.navVideo.currentTime = state.startTime;
+
+    const newDuration = state.endTime - state.startTime;
+    els.durationInput.value = newDuration.toFixed(2);
+    state.totalFrames = Math.round(state.fps * newDuration);
+    els.framesInput.value = state.totalFrames;
+}
+function updateTimelineUI() {
+const startPct = (state.startTime / state.videoDuration) * 100;
+const endPct = (state.endTime / state.videoDuration) * 100;
+els.timelineSelection.style.left = `${startPct}%`; els.timelineSelection.style.width = `${endPct - startPct}%`;
+els.timeDisplay.innerText = `${state.startTime.toFixed(1)}s - ${state.endTime.toFixed(1)}s`;
+}
+
+// --- Generator Logic (Refactored & Class-Based) ---
+function getOutputDimensions() {
+    if (state.useOriginalSize && state.platformMode === 'free') {
+        return { width: Math.round(state.cropW), height: Math.round(state.cropH) };
+    }
+    let inputSize = parseInt(els.sizeInput.value) || 112;
+
+    if (state.platformMode !== 'free') {
+        const max = APP_CONFIG.PLATFORMS[state.platformMode].maxSize;
+        if (inputSize > max) inputSize = max;
+    }
+
+    if (state.platformMode !== 'free' || !state.freeAspect) {
+        return { width: inputSize, height: inputSize };
+    } else {
+        const ratio = state.cropW / state.cropH;
+        let w, h;
+        if (ratio >= 1) {
+            w = inputSize; h = Math.round(inputSize / ratio);
+        } else {
+            w = Math.round(inputSize * ratio); h = inputSize;
+        }
+        return { width: Math.max(1, w), height: Math.max(1, h) };
+    }
+}
+
+els.qualitySelect.addEventListener('change', () => previewController.update());
+
+function clearQualityPreview() {
+    previewController.clear();
+}
+els.navContainer.addEventListener('mousedown', clearQualityPreview);
+els.navContainer.addEventListener('touchstart', clearQualityPreview, {passive: true});
+
+els.playLoopBtn.addEventListener('click', togglePlayLoop);
+function togglePlayLoop() {
+    if (state.isPlayingLoop) {
+        state.isPlayingLoop = false; cancelAnimationFrame(state.animationFrameId);
+        if(state.mode === 'video') { els.sourceVideo.pause(); els.navVideo.pause(); }
+        els.playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; els.playLoopBtn.classList.replace('bg-[#9146FF]', 'bg-[#27272a]');
+        els.playLoopBtn.style.backgroundColor = '';
+        els.playLoopBtn.style.color = '';
+        els.playLoopBtn.classList.add('text-white');
+        setTimeout(() => previewController.update(), 50);
+    } else {
+        clearQualityPreview(); state.isPlayingLoop = true;
+        els.playIcon.innerHTML = '<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>'; 
+        els.playLoopBtn.classList.remove('bg-[#27272a]');
+        els.playLoopBtn.style.backgroundColor = 'var(--theme-color)';
+        els.playLoopBtn.style.color = 'var(--theme-text-color)';
+        els.playLoopBtn.classList.remove('text-white');
+        if(state.mode === 'video') {
+            els.sourceVideo.currentTime = state.startTime; els.sourceVideo.play();
+            els.navVideo.currentTime = state.startTime; els.navVideo.play();
+            loopVideo();
+        }
+        else { state.loopStartTime = null; loopImage(); }
+    }
+}
+function loopVideo() {
+    if(!state.isPlayingLoop) return;
+    if(els.sourceVideo.currentTime >= state.endTime) {
+        els.sourceVideo.currentTime = state.startTime;
+        els.navVideo.currentTime = state.startTime;
+    }
+    if(Math.abs(els.navVideo.currentTime - els.sourceVideo.currentTime) > 0.2) {
+        els.navVideo.currentTime = els.sourceVideo.currentTime;
+    }
+    const pct = (els.sourceVideo.currentTime / state.videoDuration) * 100;
+    els.playhead.style.left = `${pct}%`;
+    requestAnimationFrame(loopVideo);
+}
+function loopImage(timestamp) {
+    if(!state.isPlayingLoop) return;
+    if(!timestamp) timestamp = performance.now();
+    if(!state.loopStartTime) state.loopStartTime = timestamp;
+
+    const elapsed = timestamp - state.loopStartTime;
+    const frameDuration = 1000 / state.fps;
+    let currentFrame = Math.floor(elapsed / frameDuration) % state.totalFrames;
+    let index = Math.floor(currentFrame * (state.images.length / state.totalFrames));
+    index = Math.min(index, state.images.length - 1);
+
+    if(state.images[index]) {
+        els.sourceImage.src = state.images[index].url;
+        els.navImage.src = state.images[index].url;
+    }
+    state.animationFrameId = requestAnimationFrame(loopImage);
+}
+
+// UI Locking Helper
+function toggleUILock(isLocked) {
+    const targets = [
+        document.getElementById('settingsPanel'),
+        document.getElementById('timelineWrapper'),
+        document.getElementById('playLoopBtn'),
+        document.getElementById('undoBtn'),
+        document.getElementById('redoBtn')
+    ];
+    targets.forEach(el => {
+        if(el) {
+            if (isLocked) el.classList.add('ui-locked');
+            else el.classList.remove('ui-locked');
+        }
+    });
+}
+
+// --- Stamp Generator Object ---
+const stampGenerator = {
+    abortController: null,
+    isGenerating: false,
+
+    async start(onProgress, onComplete, onError) {
+        if (this.isGenerating) {
+            this.cancel();
+            return;
+        }
+
+        this.isGenerating = true;
+        this.abortController = new AbortController();
+        const signal = this.abortController.signal;
+
+        try {
+            const dims = getOutputDimensions();
+            const quality = parseInt(els.qualitySelect.value);
+
+            const gif = new GIF({
+                workers: APP_CONFIG.WORKER_COUNT,
+                quality: quality,
+                width: dims.width,
+                height: dims.height,
+                workerScript: workerBlobURL,
+                dither: state.dither,
+                transparent: state.chromaKey.enabled ? APP_CONFIG.MAGIC_PINK : null
+            });
+
+            const canvas = document.createElement('canvas'); 
+            canvas.width = dims.width; canvas.height = dims.height;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: true });
+            
+            ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+            const filters = `brightness(${state.filters.brightness}%) contrast(${state.filters.contrast}%) saturate(${state.filters.saturate}%)`;
+            ctx.filter = filters;
+
+            const draw = (source) => {
+                ctx.clearRect(0, 0, dims.width, dims.height);
+                if (state.chromaKey.enabled) {
+                    const hex = '#' + APP_CONFIG.MAGIC_PINK.toString(16).padStart(6, '0');
+                    ctx.fillStyle = hex;
+                } else {
+                    ctx.fillStyle = '#000';
+                }
+                ctx.fillRect(0, 0, dims.width, dims.height);
+                
+                const sx = state.posX; const sy = state.posY; 
+                const sw = state.cropW; const sh = state.cropH;
+                ctx.drawImage(source, sx, sy, sw, sh, 0, 0, dims.width, dims.height);
+                
+                if (state.chromaKey.enabled) {
+                    applyChromaKey(ctx, dims.width, dims.height, state.chromaKey.color, state.chromaKey.threshold, state.chromaKey.smoothness, true);
+                }
+                
+                ctx.filter = 'none';
+                drawTextOverlay(ctx, dims.width, dims.height);
+                ctx.filter = filters;
+            };
+
+            if(state.mode === 'video') {
+                const step = 1 / state.fps; 
+                const duration = state.endTime - state.startTime;
+                let t = state.startTime;
+                let frameCount = 0;
+
+                const processVideoFrame = async () => {
+                    if (signal.aborted) return;
+                    if(t >= state.endTime || frameCount >= state.totalFrames) {
+                        gif.render(); return;
+                    }
+
+                    els.sourceVideo.currentTime = t;
+                    try {
+                        await new Promise(r => {
+                            const h = () => { els.sourceVideo.removeEventListener('seeked', h); r(); };
+                            els.sourceVideo.addEventListener('seeked', h);
+                            setTimeout(h, 1000);
+                        });
+                    } catch(e){}
+
+                    if (signal.aborted) return;
+                    draw(els.sourceVideo);
+                    gif.addFrame(ctx, { copy: true, delay: step * 1000 });
+                    
+                    if(onProgress) onProgress((t - state.startTime) / duration);
+                    t += step; frameCount++;
+                    setTimeout(processVideoFrame, 0);
+                };
+                processVideoFrame();
+            } else {
+                const delay = 1000 / state.fps;
+                let frameIndices = [];
+                for(let i=0; i<state.totalFrames; i++) frameIndices.push(i);
+                if (state.pingPong && state.totalFrames > 2) {
+                    for (let i = state.totalFrames - 2; i > 0; i--) frameIndices.push(i);
+                }
+
+                for(let i=0; i<frameIndices.length; i++) {
+                    if (signal.aborted) break;
+                    let logicalIdx = frameIndices[i];
+                    let imgIdx = Math.floor(logicalIdx * (state.images.length / state.totalFrames));
+                    imgIdx = Math.min(imgIdx, state.images.length-1);
+                    
+                    const img = new Image(); img.src = state.images[imgIdx].url;
+                    await new Promise(r => img.onload = r);
+                    
+                    draw(img);
+                    gif.addFrame(ctx, { copy: true, delay: delay });
+                    if(onProgress) onProgress(i / frameIndices.length);
+                }
+                if (!signal.aborted) gif.render();
+            }
+
+            gif.on('finished', blob => {
+                if (!signal.aborted) onComplete(blob, dims);
+                this.isGenerating = false;
+                this.abortController = null;
+            });
+
+        } catch(e) {
+            if(onError) onError(e);
+            this.isGenerating = false;
+            this.abortController = null;
+        }
+    },
+
+    cancel() {
+        if (this.abortController) {
+            this.abortController.abort();
+            this.abortController = null;
+        }
+        this.isGenerating = false;
+    }
+};
+
+els.generateBtn.addEventListener('click', () => {
+    // 1. Cancel Action
+    if (stampGenerator.isGenerating) {
+        stampGenerator.cancel();
+        toggleUILock(false);
+        
+        // Reset Button Style
+        const config = APP_CONFIG.PLATFORMS[state.platformMode];
+        els.generateBtnText.innerText = "CREATE STAMP";
+        els.generateBtn.style.backgroundColor = config.color;
+        els.generateBtn.style.color = config.textColor;
+        els.btnProgress.style.width = '0%';
+        
+        showToast("キャンセルされました");
+        return;
+    }
+
+    // 2. Start Action
+    if(!workerBlobURL) return showToast("初期化中...");
+    if(state.isPlayingLoop) togglePlayLoop();
+    clearQualityPreview();
+
+    // UI Updates (Start Progress)
+    toggleUILock(true);
+    els.generateBtnText.innerText = "CANCEL (0%)";
+    
+    // ボタン背景を暗くし、プログレスバーをテーマカラーにする
+    els.generateBtn.style.backgroundColor = '#27272a'; // Dark Gray Background
+    els.generateBtn.style.color = '#ffffff';
+    els.btnProgress.style.backgroundColor = APP_CONFIG.PLATFORMS[state.platformMode].color; // Theme Color Progress
+    els.btnProgress.style.width = '0%';
+
+    // Start Generation
+    stampGenerator.start(
+        // Progress
+        (pct) => {
+            const percent = Math.round(pct * 100);
+            els.btnProgress.style.width = percent + '%';
+            els.generateBtnText.innerText = `CANCEL (${percent}%)`;
+        },
+        // Complete
+        (blob, dims) => {
+            toggleUILock(false);
+            
+            // Reset Button Style
+            const config = APP_CONFIG.PLATFORMS[state.platformMode];
+            els.generateBtnText.innerText = "CREATE STAMP";
+            els.generateBtn.style.backgroundColor = config.color;
+            els.generateBtn.style.color = config.textColor;
+            els.btnProgress.style.width = '0%';
+            
+            handleGenerationSuccess(blob, dims);
+        },
+        // Error
+        (err) => {
+            console.error(err);
+            toggleUILock(false);
+            
+            // Reset Button Style
+            const config = APP_CONFIG.PLATFORMS[state.platformMode];
+            els.generateBtnText.innerText = "CREATE STAMP";
+            els.generateBtn.style.backgroundColor = config.color;
+            els.generateBtn.style.color = config.textColor;
+            els.btnProgress.style.width = '0%';
+            
+            showToast("エラーが発生しました", true);
+        }
+    );
+});
+
+function handleGenerationSuccess(blob, dims) {
+    const url = resourceManager.createURL(blob);
+    const sizeMB = blob.size / (1024 * 1024);
+    const isOverSize = sizeMB > APP_CONFIG.MAX_FILE_SIZE_MB;
+    const sizeText = (blob.size / 1024).toFixed(1) + 'KB';
+    const sizeClass = isOverSize ? 'text-red-500 font-bold' : 'text-gray-500';
+    const btnStyle = isOverSize ? 'background-color: #dc2626; color: #fff;' : `background-color: ${APP_CONFIG.PLATFORMS[state.platformMode].color}; color: ${APP_CONFIG.PLATFORMS[state.platformMode].textColor};`;
+    const btnText = isOverSize ? `OVER ${APP_CONFIG.MAX_FILE_SIZE_MB}MB` : 'DL';
+
+    const div = document.createElement('div');
+    div.className = "flex items-center gap-3 bg-[#1f1f23] p-2 rounded-lg border border-[#333] mb-2 group relative";
+
+    const delBtn = document.createElement('button');
+    delBtn.className = "absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-md";
+    delBtn.innerHTML = "×";
+    delBtn.onclick = () => {
+        resourceManager.revoke(url);
+        div.remove();
+        if(els.resultList.children.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.id = "noStampsMsg";
+            emptyMsg.className = "text-center mt-10 text-[10px] text-gray-600";
+            emptyMsg.innerText = "No stamps";
+            els.resultList.appendChild(emptyMsg);
+        }
+    };
+
+    div.innerHTML = `
+    <img src="${url}" class="w-10 h-10 rounded bg-black/50">
+    <div class="flex-1 min-w-0">
+    <div class="text-xs font-bold text-white">Stamp (${dims.width}x${dims.height})</div>
+    <div class="text-[10px] ${sizeClass}">${sizeText}</div>
+    </div>
+    <a href="${url}" download="stamp.gif" class="text-xs px-2 py-1 rounded text-center min-w-[50px] hover:brightness-110" style="${btnStyle}">${btnText}</a>
+    `;
+    div.appendChild(delBtn);
+
+    if (els.qualityPreviewImage.src) resourceManager.revoke(els.qualityPreviewImage.src);
+
+    const noMsg = document.getElementById('noStampsMsg');
+    if (noMsg) noMsg.remove();
+
+    els.resultList.insertBefore(div, els.resultList.firstChild);
+
+    if(isOverSize) showToast(`注意: ファイルサイズが ${APP_CONFIG.MAX_FILE_SIZE_MB}MB を超えています`, true);
+    else showToast("生成完了!");
+}
+
+function showToast(msg, isError = false) {
+const t = document.getElementById('toast'); 
+t.innerText = msg; 
+if(isError) t.classList.add('error');
+else t.classList.remove('error');
+t.classList.add('show');
+setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// --- History Hooks ---
+function bindChangeForHistory(el) {
+    if(!el) return;
+    el.addEventListener('change', () => historyManager.push());
+}
+
+[
+    els.sizeInput, els.fpsInput, els.durationInput, els.framesInput,
+    els.brightnessSlider, els.contrastSlider, els.saturateSlider,
+    els.chromaToggle, els.chromaColorPicker, els.chromaThreshold, els.chromaSmoothness,
+    els.textToggle, els.textInput, els.textFontSelect, els.textColor, els.textBorderColor,
+    els.textSizeSlider, els.textStrokeSlider, els.textPosX, els.textPosY,
+    els.extendFramesToggle, els.pingPongToggle, els.ditherToggle,
+    els.originalSizeToggle, els.freeAspectToggle
+].forEach(bindChangeForHistory);
+
+els.undoBtn.addEventListener('click', () => historyManager.undo());
+els.redoBtn.addEventListener('click', () => historyManager.redo());
+
+window.addEventListener('keydown', (e) => {
+    const target = e.target;
+    const isInput = target.tagName === 'INPUT' || 
+                    target.tagName === 'TEXTAREA' || 
+                    target.tagName === 'SELECT' ||
+                    target.isContentEditable;
+
+    if (isInput) return;
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+            historyManager.redo();
+        } else {
+            historyManager.undo();
+        }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        historyManager.redo();
+    }
+    
+    if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayLoop();
+    }
+});
+</script>
+</body>
+</html>
