@@ -43,25 +43,25 @@ button:disabled, input:disabled, select:disabled,
 }
 .cursor-crosshair { cursor: crosshair !important; }
 
-/* Info Box */
-.info-box {
-    background: #0e0e10;
-    border-top: 1px solid #27272a;
-    padding: 8px 12px;
-    font-size: 11px;
-    color: #888;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    line-height: 1.4;
-    border-left: 3px solid transparent;
-    transition: all 0.2s;
-}
-.info-box.active {
-    border-left-color: var(--theme-color);
-    color: #ddd;
+/* Hover Tooltip (follows cursor) */
+.hover-tooltip {
+    position: fixed;
+    top: 0; left: 0;
+    max-width: 240px;
     background: #18181b;
+    color: #eee;
+    border: 1px solid var(--theme-color);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: opacity 0.12s;
 }
+.hover-tooltip.active { opacity: 1; }
 
 /* NAVIGATOR */
 .navigator-area.drag-active {
@@ -114,11 +114,14 @@ button:disabled, input:disabled, select:disabled,
 #navBox {
     position: absolute;
     border: 2px solid #ff4444;
-    background: rgba(255, 68, 68, 0.1);
+    background: transparent;
     z-index: 10;
     cursor: move;
     box-shadow: 0 0 0 4000px rgba(0,0,0,0.5);
     touch-action: none;
+}
+#navBox.navBox-editing {
+    background: rgba(255, 68, 68, 0.15);
 }
 .resize-handle {
     position: absolute;
@@ -208,6 +211,105 @@ button:disabled, input:disabled, select:disabled,
     transition: background 0.2s;
 }
 .delete-btn:hover { background: #ff4444; }
+
+/* Stamp Preview Modal */
+.stamp-preview-modal {
+    position: fixed; inset: 0; z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+}
+.stamp-preview-modal.hidden { display: none; }
+.stamp-preview-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.75);
+    cursor: pointer;
+}
+.stamp-preview-content {
+    position: relative;
+    background: #18181b;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 24px 20px 16px;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.stamp-preview-close {
+    position: absolute;
+    top: -12px; right: -12px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #27272a;
+    color: #fff;
+    border: 2px solid #18181b;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+}
+.stamp-preview-close:hover { background: #ff4444; }
+.stamp-preview-image {
+    max-width: min(70vw, 480px);
+    max-height: 60vh;
+    image-rendering: pixelated;
+    background: repeating-conic-gradient(#2a2a2e 0% 25%, #1c1c1f 0% 50%) 50% / 16px 16px;
+    border-radius: 6px;
+}
+.stamp-preview-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+}
+.stamp-preview-meta-text {
+    font-size: 11px;
+    color: #999;
+}
+.stamp-preview-download {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 6px;
+    background: var(--theme-color);
+    color: var(--theme-text-color);
+    text-decoration: none;
+    white-space: nowrap;
+}
+.stamp-preview-download:hover { filter: brightness(1.1); }
+
+/* Option Chips (Stretch / Ping-Pong) */
+.opt-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    flex: 1;
+    background: #0e0e10;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 3px 7px;
+    transition: border-color 0.2s, background 0.2s;
+}
+.opt-chip.active {
+    border-color: var(--theme-color);
+    background: rgba(255,255,255,0.05);
+}
+.opt-chip-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+.opt-chip.active .opt-chip-label { color: #fff; }
+.opt-chip.active .opt-chip-icon { color: var(--theme-color); }
+.opt-chip-icon { width: 11px; height: 11px; color: #6b7280; }
 
 /* Toast */
 .toast {
@@ -380,44 +482,39 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
         </div>
 
         <!-- BOTTOM: Settings (Expanded Height) -->
-        <div id="settingsPanel" class="shrink-0 bg-[#18181b] border-t border-[#27272a] p-2 overflow-y-auto custom-scrollbar" style="height: 320px;">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 h-full">
+        <div id="settingsPanel" class="shrink-0 bg-[#18181b] border-t border-[#27272a] p-2 overflow-y-auto custom-scrollbar" style="max-height: 40vh;">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 items-start">
                 
                 <!-- Col 1: Output Settings -->
-                <div class="flex flex-col h-full gap-1">
+                <div class="flex flex-col gap-1">
                     <div class="flex items-center justify-between mb-0.5 h-6">
                         <div class="flex items-center gap-2">
                             <svg class="w-3.5 h-3.5" style="color: var(--theme-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
                             <span class="text-[10px] font-bold text-gray-400">OUTPUT</span>
                         </div>
                         <div class="flex gap-0.5" id="platformSelector">
-                            <button class="platform-btn active" data-platform="twitch" data-help="Twitchスタンプ (112px, 最大1MB)">Twitch</button>
-                            <button class="platform-btn" data-platform="kick" data-help="Kickスタンプ (500px)">Kick</button>
-                            <button class="platform-btn" data-platform="youtube" data-help="YouTubeスタンプ (480px)">YouTube</button>
-                            <button class="platform-btn" data-platform="free" data-help="制限なし (自由設定)">Free</button>
+                            <button class="platform-btn" data-platform="twitch" data-help="Twitchスタンプ (112px, 最大1MB)">Twitch</button>
+                            <button class="platform-btn" data-platform="kick" data-help="Kickスタンプ (500px, 最大1MB)">Kick</button>
+                            <button class="platform-btn" data-platform="youtube" data-help="YouTubeスタンプ (480px, 最大1MB)">YouTube</button>
+                            <button class="platform-btn active" data-platform="free" data-help="制限なし (自由設定)">Free</button>
                         </div>
                     </div>
                     
-                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1 flex-1">
-                        <div class="flex items-center gap-2 border-b border-[#2f2f35] pb-1 mb-0.5">
-                            <div class="w-12 shrink-0">
+                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1.5">
+                        <div class="flex items-end gap-2">
+                            <div class="w-14 shrink-0">
                                 <label class="text-[9px] font-bold text-gray-500 block mb-0.5">SIZE</label>
                                 <input type="number" id="sizeInput" value="112" step="1" min="16" max="112" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="出力サイズ (ピクセル)">
                             </div>
-                            <div class="flex-1 flex items-end h-full pb-0.5">
-                                <label class="flex items-center gap-1.5 cursor-pointer select-none opacity-50" id="originalSizeLabel" data-help="元の解像度を使用">
-                                    <input type="checkbox" id="originalSizeToggle" disabled class="rounded bg-[#0e0e10] border-[#333] focus:ring-0 w-3 h-3 cursor-pointer" style="color: var(--theme-color)">
-                                    <span class="text-[9px] font-bold text-gray-400">Original</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2">
+                            <label class="flex items-center gap-1.5 cursor-pointer select-none opacity-50 pb-1 shrink-0" id="originalSizeLabel" data-help="元の解像度を使用">
+                                <input type="checkbox" id="originalSizeToggle" disabled class="rounded bg-[#0e0e10] border-[#333] focus:ring-0 w-3 h-3 cursor-pointer" style="color: var(--theme-color)">
+                                <span class="text-[9px] font-bold text-gray-400">Original</span>
+                            </label>
                             <div class="w-12 shrink-0">
                                 <label class="text-[9px] font-bold text-gray-500 block mb-0.5">FPS</label>
                                 <input type="number" id="fpsInput" value="30" step="0.1" min="1" max="60" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="フレームレート (FPS)">
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 min-w-0">
                                 <label class="text-[9px] font-bold text-gray-500 block mb-0.5">PRESET</label>
                                 <select id="fpsSelect" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded px-1 py-0.5" data-help="FPSプリセット選択">
                                     <option value="60">60 FPS</option>
@@ -430,35 +527,16 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
+                        <div class="flex items-end gap-2">
+                            <div class="flex-1 min-w-0">
                                 <label class="text-[9px] font-bold text-gray-500 block mb-0.5">SEC</label>
                                 <input type="number" id="durationInput" value="1.0" step="0.1" min="0.1" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="合計時間 (秒)">
                             </div>
-                            <div>
+                            <div class="flex-1 min-w-0">
                                 <label class="text-[9px] font-bold text-gray-500 block mb-0.5">FRAMES</label>
                                 <input type="number" id="framesInput" value="30" step="1" min="1" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded text-center py-0.5" data-help="合計フレーム数">
                             </div>
-                        </div>
-                        
-                        <div id="extendFramesContainer" class="flex items-center justify-between bg-[#0e0e10] p-1 rounded border border-[#333]" data-help="時間を埋めるように画像を伸縮">
-                            <span class="text-[9px] text-gray-400 font-bold ml-1">Stretch</span>
-                            <div class="relative w-6 h-3">
-                                <input type="checkbox" id="extendFramesToggle" checked class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
-                                <label for="extendFramesToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
-                            </div>
-                        </div>
-
-                        <div id="pingPongContainer" class="flex items-center justify-between bg-[#0e0e10] p-1 rounded border border-[#333] mt-1 hidden" data-help="往復再生 (ピンポン再生)">
-                            <span class="text-[9px] text-gray-400 font-bold ml-1">Ping-Pong</span>
-                            <div class="relative w-6 h-3">
-                                <input type="checkbox" id="pingPongToggle" class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
-                                <label for="pingPongToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
-                            </div>
-                        </div>
-                        
-                        <div class="flex gap-2 mt-1">
-                            <div class="flex-1">
+                            <div class="flex-1 min-w-0">
                                 <label class="text-[9px] font-bold text-gray-500 block mb-0.5">QUALITY</label>
                                 <select id="qualitySelect" class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded px-1 py-0.5" data-help="GIF画質 (高品質は処理が遅くなります)">
                                     <option value="1" selected>High</option>
@@ -466,18 +544,40 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
                                     <option value="20">Low</option>
                                 </select>
                             </div>
-                            <div class="flex items-end pb-1">
-                                <label class="flex items-center gap-1 cursor-pointer select-none" data-help="ディザリングを有効化 (グラデーションを滑らかに)">
-                                    <input type="checkbox" id="ditherToggle" class="rounded bg-[#0e0e10] border-[#333] focus:ring-0 w-3 h-3 cursor-pointer" style="color: var(--theme-color)">
-                                    <span class="text-[9px] font-bold text-gray-400">Dither</span>
-                                </label>
+                            <label class="flex items-center gap-1 cursor-pointer select-none pb-1 shrink-0" data-help="ディザリングを有効化 (グラデーションを滑らかに)">
+                                <input type="checkbox" id="ditherToggle" class="rounded bg-[#0e0e10] border-[#333] focus:ring-0 w-3 h-3 cursor-pointer" style="color: var(--theme-color)">
+                                <span class="text-[9px] font-bold text-gray-400">Dither</span>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div id="pingPongContainer" class="opt-chip" style="display: none;" data-help="往復再生 (ピンポン)。再生後に逆再生で戻るため、動画の切れ目が目立たず自然にループします。">
+                                <span class="opt-chip-label">
+                                    <svg class="opt-chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                    Ping-Pong (往復)
+                                </span>
+                                <div class="relative w-6 h-3 shrink-0">
+                                    <input type="checkbox" id="pingPongToggle" class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
+                                    <label for="pingPongToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
+                                </div>
+                            </div>
+
+                            <div id="extendFramesContainer" class="opt-chip" data-help="時間を埋めるように画像を伸縮">
+                                <span class="opt-chip-label">
+                                    <svg class="opt-chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"></path></svg>
+                                    Stretch (伸縮)
+                                </span>
+                                <div class="relative w-6 h-3 shrink-0">
+                                    <input type="checkbox" id="extendFramesToggle" checked class="toggle-checkbox absolute block w-3 h-3 rounded-full bg-white border-2 appearance-none cursor-pointer border-[#333] right-3 transition-all duration-200"/>
+                                    <label for="extendFramesToggle" class="toggle-label block overflow-hidden h-3 rounded-full bg-[#333] cursor-pointer"></label>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Col 2: Image Adjustment -->
-                <div class="flex flex-col h-full gap-1">
+                <div class="flex flex-col gap-1">
                     <div class="flex items-center justify-between mb-0.5 h-6">
                         <div class="flex items-center gap-2">
                             <svg class="w-3.5 h-3.5" style="color: var(--theme-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
@@ -492,7 +592,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
                         </div>
                     </div>
 
-                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1 flex-1">
+                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1">
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-bold text-gray-500 w-6">BRT</span>
                             <input type="range" id="brightnessSlider" min="0" max="200" value="100" class="flex-1 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer" data-help="明るさ (Brightness)">
@@ -538,7 +638,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
                 </div>
 
                 <!-- Col 3: Text Settings -->
-                <div class="flex flex-col h-full gap-1">
+                <div class="flex flex-col gap-1">
                     <div class="flex items-center justify-between mb-0.5 h-6">
                         <div class="flex items-center gap-2">
                             <svg class="w-3.5 h-3.5" style="color: var(--theme-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -557,7 +657,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
                         </div>
                     </div>
 
-                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1.5 flex-1">
+                    <div class="bg-[#1f1f23] p-2 rounded-lg border border-[#2f2f35] shadow-sm space-y-1.5">
                         <div id="textControls" class="space-y-1.5 transition-opacity">
                             <input type="text" id="textInput" placeholder="Enter text..." class="w-full bg-[#0e0e10] border border-[#333] text-gray-200 text-[10px] rounded px-2 py-1" data-help="テキスト内容を入力">
                             
@@ -624,13 +724,8 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
         </div>
 
         <!-- History List -->
-        <div id="resultList" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-[#0e0e10]" data-help="生成されたスタンプがここに表示されます。「DL」で保存。">
+        <div id="resultList" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-[#0e0e10]" data-help="生成されたスタンプの履歴です。「DL」で保存、サムネイルをクリックすると拡大プレビューを表示できます。">
             <div id="noStampsMsg" class="text-center mt-10 text-[10px] text-gray-600">No stamps</div>
-        </div>
-
-        <!-- Info Box (New) -->
-        <div id="infoBox" class="info-box">
-            各操作の上にマウスを乗せると説明が表示されます。
         </div>
 
         <!-- Actions -->
@@ -654,6 +749,19 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 </div>
 
 <div id="toast" class="toast"></div>
+<div id="hoverTooltip" class="hover-tooltip"></div>
+
+<div id="stampPreviewModal" class="stamp-preview-modal hidden">
+    <div id="stampPreviewBackdrop" class="stamp-preview-backdrop"></div>
+    <div class="stamp-preview-content">
+        <button id="stampPreviewCloseBtn" class="stamp-preview-close">×</button>
+        <img id="stampPreviewImage" class="stamp-preview-image" src="" alt="Stamp Preview">
+        <div class="stamp-preview-meta">
+            <span id="stampPreviewMetaText" class="stamp-preview-meta-text"></span>
+            <a id="stampPreviewDownload" class="stamp-preview-download" href="#" download>DL</a>
+        </div>
+    </div>
+</div>
 
 <!-- Hidden Source Elements -->
 <video id="sourceVideo" class="hidden" muted playsinline></video>
@@ -685,6 +793,13 @@ MIN_CROP_PX: 16,
 MAX_FILE_SIZE_MB: 1, // Output warning threshold
 MAX_INPUT_SIZE_MB: 50, // Input warning threshold
 MAX_TEXTURE_SIZE: 2048, // Max dimension for internal processing to prevent crash
+AUTO_FIT_MAX_ATTEMPTS: 6, // Number of re-generation passes when over the upload limit
+AUTO_FIT_SIZE_STEP: 0.85, // Shrink ratio applied to pixel size per attempt
+AUTO_FIT_MIN_SIZE: 16, // Minimum pixel size floor
+AUTO_FIT_MIN_FRAMES: 4, // Minimum frame count floor
+AUTO_FIT_RETRY_DIP_PCT: 40, // Progress bar starting point on a retry pass (avoids resetting to 0%)
+TIMELINE_DRAG_THRESHOLD_PX: 4, // Movement before a timeline click becomes a range drag
+PREVIEW_REVERSE_FPS: 15, // Cap on reverse-scrub rate for Ping-Pong preview (keeps seeking responsive)
 MAGIC_PINK: 0xFF00FF,
 WORKER_COUNT: navigator.hardwareConcurrency || 4,
 PLATFORMS: {
@@ -747,6 +862,27 @@ this.urls.clear();
 const resourceManager = new ResourceManager();
 
 // --- Utilities ---
+const usedGifFileNames = new Set();
+function sanitizeFileNamePart(str) {
+return str.replace(/[\\/:*?"<>|]/g, '_').trim() || 'stamp';
+}
+function generateGifFileName() {
+const rawBase = state.sourceFileName ? state.sourceFileName.replace(/\.[^/.]+$/, '') : 'stamp';
+const base = sanitizeFileNamePart(rawBase);
+const now = new Date();
+const pad = n => String(n).padStart(2, '0');
+const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+let fileName = `${base}_${stamp}.gif`;
+let suffix = 1;
+while (usedGifFileNames.has(fileName)) {
+fileName = `${base}_${stamp}_${suffix}.gif`;
+suffix++;
+}
+usedGifFileNames.add(fileName);
+return fileName;
+}
+
 function debounce(func, wait) {
 let timeout;
 return function(...args) {
@@ -848,11 +984,19 @@ livePreviewCanvas: document.getElementById('livePreviewCanvas'),
 
 undoBtn: document.getElementById('undoBtn'),
 redoBtn: document.getElementById('redoBtn'),
-infoBox: document.getElementById('infoBox')
+hoverTooltip: document.getElementById('hoverTooltip'),
+
+stampPreviewModal: document.getElementById('stampPreviewModal'),
+stampPreviewBackdrop: document.getElementById('stampPreviewBackdrop'),
+stampPreviewCloseBtn: document.getElementById('stampPreviewCloseBtn'),
+stampPreviewImage: document.getElementById('stampPreviewImage'),
+stampPreviewMetaText: document.getElementById('stampPreviewMetaText'),
+stampPreviewDownload: document.getElementById('stampPreviewDownload')
 };
 
 let state = {
 mode: 'video', fps: 30, maxDuration: 1.0,
+sourceFileName: null,
 cropW: 300, cropH: 300, posX: 0, posY: 0,
 videoDuration: 0, startTime: 0, endTime: 1.0,
 mediaWidth: 0, mediaHeight: 0,
@@ -879,8 +1023,8 @@ isResizingNav: false,
 dither: false,
 isDraggingTimeline: false,
 dragStart: { x:0, y:0, posX:0, posY:0, width:0, scale:0, startPct:0, endPct:0 },
-isPlayingLoop: false, animationFrameId: null, loopStartTime: null,
-platformMode: 'twitch',
+isPlayingLoop: false, animationFrameId: null, loopStartTime: null, playDirection: 1, reverseTimerId: null,
+platformMode: 'free',
 useOriginalSize: false,
 freeAspect: false,
 isGenerating: false,
@@ -1126,39 +1270,55 @@ window.addEventListener('touchcancel', end);
 }
 }
 
-// --- Help System ---
+// --- Help System (Cursor-following Tooltip) ---
 class HelpSystem {
     constructor() {
-        this.defaultText = "各操作の上にマウスを乗せると説明が表示されます。";
+        this.offsetX = 16;
+        this.offsetY = 16;
         this.init();
     }
-    
+
     init() {
         document.body.addEventListener('mouseover', (e) => {
             const target = e.target.closest('[data-help]');
             if (target) {
                 this.show(target.getAttribute('data-help'));
+                this.position(e.clientX, e.clientY);
+            }
+        });
+
+        document.body.addEventListener('mousemove', (e) => {
+            if (els.hoverTooltip.classList.contains('active')) {
+                this.position(e.clientX, e.clientY);
             }
         });
 
         document.body.addEventListener('mouseout', (e) => {
             const target = e.target.closest('[data-help]');
             if (target) {
-                this.reset();
+                this.hide();
             }
         });
     }
 
     show(text) {
-        if (els.infoBox.innerText !== text) {
-            els.infoBox.innerText = text;
-            els.infoBox.classList.add('active');
-        }
+        els.hoverTooltip.innerText = text;
+        els.hoverTooltip.classList.add('active');
     }
 
-    reset() {
-        els.infoBox.innerText = this.defaultText;
-        els.infoBox.classList.remove('active');
+    hide() {
+        els.hoverTooltip.classList.remove('active');
+    }
+
+    position(clientX, clientY) {
+        const tooltip = els.hoverTooltip;
+        const rect = tooltip.getBoundingClientRect();
+        let left = clientX + this.offsetX;
+        let top = clientY + this.offsetY;
+        if (left + rect.width > window.innerWidth) left = clientX - rect.width - this.offsetX;
+        if (top + rect.height > window.innerHeight) top = clientY - rect.height - this.offsetY;
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
     }
 }
 const helpSystem = new HelpSystem();
@@ -1319,6 +1479,7 @@ class HistoryManager {
         els.ditherToggle.checked = state.dither;
         els.originalSizeToggle.checked = state.useOriginalSize;
         els.freeAspectToggle.checked = state.freeAspect;
+        updateToggleChipUI();
         
         els.platformBtns.forEach(b => {
             if(b.dataset.platform === state.platformMode) b.classList.add('active');
@@ -1390,6 +1551,7 @@ els.navBox.style.cursor = 'grabbing';
 state.isDraggingNav = true;
 els.navBox.style.boxShadow = 'none';
 els.navBox.style.border = '2px solid #ff4444';
+els.navBox.classList.add('navBox-editing');
 },
 onMove: (pos) => {
 if (state.isResizingNav) return;
@@ -1429,6 +1591,7 @@ updateTextPreview();
 } else {
 state.isDraggingNav = false;
 els.navBox.style.boxShadow = '0 0 0 4000px rgba(0,0,0,0.5)';
+els.navBox.classList.remove('navBox-editing');
 // Show preview again
 els.livePreviewCanvas.style.display = 'block';
 }
@@ -1446,6 +1609,7 @@ e.stopPropagation();
 previewController.clear();
 state.isResizingNav = true;
 els.navBox.style.boxShadow = 'none';
+els.navBox.classList.add('navBox-editing');
 // Hide preview while resizing
 els.livePreviewCanvas.style.display = 'none';
 
@@ -1491,6 +1655,7 @@ els.sizeInput.value = Math.round(state.cropW);
 onEnd: () => { 
 state.isResizingNav = false; 
 els.navBox.style.boxShadow = '0 0 0 4000px rgba(0,0,0,0.5)';
+els.navBox.classList.remove('navBox-editing');
 // Show preview again
 els.livePreviewCanvas.style.display = 'block';
 previewController.update(); 
@@ -1623,6 +1788,7 @@ els.navArea.addEventListener('drop', e => {
 
 els.extendFramesToggle.addEventListener('change', e => {
 state.extendFrames = e.target.checked;
+updateToggleChipUI();
 if (!state.extendFrames && state.mode === 'image') {
 state.totalFrames = Math.max(1, state.images.length);
 els.framesInput.value = state.totalFrames;
@@ -1637,6 +1803,13 @@ updateConfig('frames');
 
 els.pingPongToggle.addEventListener('change', e => {
 state.pingPong = e.target.checked;
+updateToggleChipUI();
+if (!state.pingPong && state.isPlayingLoop && state.mode === 'video' && state.playDirection === -1) {
+clearTimeout(state.reverseTimerId);
+state.playDirection = 1;
+els.sourceVideo.play(); els.navVideo.play();
+loopVideo();
+}
 });
 
 els.sizeInput.addEventListener('input', function() {
@@ -1712,6 +1885,7 @@ if(els.clearHistoryBtn) {
 els.clearHistoryBtn.addEventListener('click', () => {
 const imgs = els.resultList.querySelectorAll('img');
 imgs.forEach(img => resourceManager.revoke(img.src));
+closeStampPreview();
 els.resultList.innerHTML = '';
 const div = document.createElement('div');
 div.id = "noStampsMsg";
@@ -1719,6 +1893,11 @@ div.className = "text-center mt-10 text-[10px] text-gray-600";
 div.innerText = "No stamps";
 els.resultList.appendChild(div);
 });
+}
+
+function updateToggleChipUI() {
+els.pingPongContainer.classList.toggle('active', els.pingPongToggle.checked);
+els.extendFramesContainer.classList.toggle('active', els.extendFramesToggle.checked);
 }
 
 function updatePlatformUI() {
@@ -1776,12 +1955,13 @@ els.framesInput.removeAttribute('max');
 }
 }
 
-setPlatform('twitch');
+setPlatform('free');
 
 // --- Loading Logic ---
 function handleFiles(files) {
 if(!files || !files.length) return;
 const file = files[0];
+state.sourceFileName = file.name;
 
 // File Size Check
 const sizeMB = file.size / (1024 * 1024);
@@ -1808,12 +1988,13 @@ els.initialView.classList.add('hidden'); els.editorView.classList.remove('hidden
 els.navVideo.style.display = 'block'; els.navImage.style.display = 'none';
 els.videoTimelineArea.style.display = 'block'; els.imageListArea.style.display = 'none';
 els.extendFramesContainer.style.display = 'none';
-els.pingPongContainer.classList.add('hidden');
+els.pingPongContainer.style.display = 'flex';
+updateToggleChipUI();
 els.modeBadge.innerText = "VIDEO MODE";
 
 state.fps = 30;
 state.startTime = 0;
-state.endTime = Math.min(state.videoDuration, 1.0);
+state.endTime = state.platformMode === 'free' ? state.videoDuration : Math.min(state.videoDuration, 1.0);
 state.totalFrames = Math.round(state.fps * (state.endTime - state.startTime));
 
 els.fpsInput.value = 30; els.fpsSelect.value = 30;
@@ -1821,7 +2002,12 @@ els.durationInput.value = (state.endTime - state.startTime).toFixed(2);
 els.framesInput.value = state.totalFrames;
 
 fitNavigatorToScreen();
-autoMaximizeCrop(); updateTimelineUI(); showToast("Video Loaded");
+if (state.platformMode === 'free') {
+useFullFrameCrop();
+} else {
+autoMaximizeCrop();
+}
+updateTimelineUI(); showToast("Video Loaded");
 
 // Auto Loop Start
 if(!state.isPlayingLoop) togglePlayLoop();
@@ -1928,7 +2114,8 @@ els.initialView.classList.add('hidden'); els.editorView.classList.remove('hidden
 els.navVideo.style.display = 'none'; els.navImage.style.display = 'block';
 els.videoTimelineArea.style.display = 'none'; els.imageListArea.style.display = 'block';
 els.extendFramesContainer.style.display = 'flex';
-els.pingPongContainer.classList.remove('hidden');
+els.pingPongContainer.style.display = 'flex';
+updateToggleChipUI();
 els.modeBadge.innerText = "IMAGE MODE";
 
 if(!isAppend) {
@@ -2110,6 +2297,23 @@ els.sizeInput.value = Math.round(state.cropW);
 }
 }
 
+function useFullFrameCrop() {
+if (!state.mediaWidth) return;
+state.cropW = state.mediaWidth;
+state.cropH = state.mediaHeight;
+state.posX = 0;
+state.posY = 0;
+state.freeAspect = true;
+els.freeAspectToggle.checked = true;
+updateNavBox(); updateFilterPreview();
+
+setTimeout(() => previewController.update(), 100);
+
+if (state.useOriginalSize) {
+els.sizeInput.value = Math.round(state.cropW);
+}
+}
+
 function clampPos() {
 if(!state.mediaWidth) return;
 const maxX = state.mediaWidth - state.cropW;
@@ -2255,11 +2459,15 @@ previewController.update();
 });
 
 // --- Timeline ---
-els.timeline.addEventListener('mousedown', e => {
+els.timeline.addEventListener('pointerdown', e => {
 if(state.mode !== 'video') return;
+if(e.button !== undefined && e.button !== 0) return;
 state.isDraggingTimeline = true;
+try { els.timeline.setPointerCapture(e.pointerId); } catch(err) {}
+
 const rect = els.timeline.getBoundingClientRect();
 const clickPct = ((e.clientX - rect.left) / rect.width) * 100;
+const clickTime = (clickPct / 100) * state.videoDuration;
 
 if(e.target.classList.contains('handle-left')) {
 state.dragStart = { mode: 'resize-left', startPct: (state.startTime / state.videoDuration) * 100, endPct: (state.endTime / state.videoDuration) * 100, x: e.clientX };
@@ -2268,27 +2476,29 @@ state.dragStart = { mode: 'resize-right', startPct: (state.startTime / state.vid
 } else if(e.target.classList.contains('timeline-selection') || e.target.closest('.timeline-selection')) {
 state.dragStart = { mode: 'move', startPct: (state.startTime / state.videoDuration) * 100, endPct: (state.endTime / state.videoDuration) * 100, x: e.clientX };
 } else {
-const time = (clickPct / 100) * state.videoDuration;
-state.startTime = time;
-state.endTime = time;
-state.dragStart = { mode: 'create', startX: e.clientX, startTime: time };
-updateTimelineUI();
-els.sourceVideo.currentTime = time;
-els.navVideo.currentTime = time;
+state.dragStart = { mode: 'create', startX: e.clientX, startTime: clickTime, created: false };
 }
+
+seekTimelineTo(clickTime);
 });
 
-window.addEventListener('mousemove', e => { 
+els.timeline.addEventListener('pointermove', e => {
     if(state.isDraggingTimeline) {
-        handleTimelineMove(e); 
+        handleTimelineMove(e);
     }
 });
-window.addEventListener('mouseup', () => { 
+
+function endTimelineDrag(e) {
     if(state.isDraggingTimeline) {
         state.isDraggingTimeline = false;
+        if (e && e.pointerId !== undefined) {
+            try { els.timeline.releasePointerCapture(e.pointerId); } catch(err) {}
+        }
         historyManager.push();
     }
-});
+}
+els.timeline.addEventListener('pointerup', endTimelineDrag);
+els.timeline.addEventListener('pointercancel', endTimelineDrag);
 window.addEventListener('blur', () => { state.isDraggingTimeline = false; });
 
 function handleTimelineMove(e) {
@@ -2307,6 +2517,10 @@ function handleTimelineMove(e) {
     }
 
     if (state.dragStart.mode === 'create') {
+        if (!state.dragStart.created) {
+            if (Math.abs(e.clientX - state.dragStart.startX) < APP_CONFIG.TIMELINE_DRAG_THRESHOLD_PX) return;
+            state.dragStart.created = true;
+        }
         const currentPct = ((e.clientX - rect.left) / rect.width);
         // マウス位置の時間
         let currentTime = Math.max(0, Math.min(state.videoDuration, currentPct * state.videoDuration));
@@ -2429,32 +2643,64 @@ els.navContainer.addEventListener('touchstart', clearQualityPreview, {passive: t
 
 els.playLoopBtn.addEventListener('click', togglePlayLoop);
 function togglePlayLoop() {
+    if (state.isPlayingLoop) stopPlayLoop();
+    else startPlayLoop();
+}
+
+function startPlayLoop(fromTime) {
+    clearQualityPreview(); state.isPlayingLoop = true;
+    els.playIcon.innerHTML = '<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>'; 
+    els.playLoopBtn.classList.remove('bg-[#27272a]');
+    els.playLoopBtn.style.backgroundColor = 'var(--theme-color)';
+    els.playLoopBtn.style.color = 'var(--theme-text-color)';
+    els.playLoopBtn.classList.remove('text-white');
+    if(state.mode === 'video') {
+        const t = (typeof fromTime === 'number') ? fromTime : state.startTime;
+        state.playDirection = 1;
+        els.sourceVideo.currentTime = t; els.sourceVideo.play();
+        els.navVideo.currentTime = t; els.navVideo.play();
+        loopVideo();
+    }
+    else { state.loopStartTime = null; loopImage(); }
+}
+
+function stopPlayLoop() {
+    state.isPlayingLoop = false;
+    cancelAnimationFrame(state.animationFrameId);
+    clearTimeout(state.reverseTimerId);
+    if(state.mode === 'video') { els.sourceVideo.pause(); els.navVideo.pause(); }
+    els.playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; els.playLoopBtn.classList.replace('bg-[#9146FF]', 'bg-[#27272a]');
+    els.playLoopBtn.style.backgroundColor = '';
+    els.playLoopBtn.style.color = '';
+    els.playLoopBtn.classList.add('text-white');
+    setTimeout(() => previewController.update(), 50);
+}
+
+function seekTimelineTo(time) {
+    if (state.mode !== 'video') return;
+    const clamped = Math.max(0, Math.min(state.videoDuration, time));
     if (state.isPlayingLoop) {
-        state.isPlayingLoop = false; cancelAnimationFrame(state.animationFrameId);
-        if(state.mode === 'video') { els.sourceVideo.pause(); els.navVideo.pause(); }
-        els.playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; els.playLoopBtn.classList.replace('bg-[#9146FF]', 'bg-[#27272a]');
-        els.playLoopBtn.style.backgroundColor = '';
-        els.playLoopBtn.style.color = '';
-        els.playLoopBtn.classList.add('text-white');
-        setTimeout(() => previewController.update(), 50);
+        clearTimeout(state.reverseTimerId);
+        cancelAnimationFrame(state.animationFrameId);
+        state.playDirection = 1;
+        els.sourceVideo.currentTime = clamped;
+        els.navVideo.currentTime = clamped;
+        els.sourceVideo.play(); els.navVideo.play();
+        loopVideo();
     } else {
-        clearQualityPreview(); state.isPlayingLoop = true;
-        els.playIcon.innerHTML = '<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>'; 
-        els.playLoopBtn.classList.remove('bg-[#27272a]');
-        els.playLoopBtn.style.backgroundColor = 'var(--theme-color)';
-        els.playLoopBtn.style.color = 'var(--theme-text-color)';
-        els.playLoopBtn.classList.remove('text-white');
-        if(state.mode === 'video') {
-            els.sourceVideo.currentTime = state.startTime; els.sourceVideo.play();
-            els.navVideo.currentTime = state.startTime; els.navVideo.play();
-            loopVideo();
-        }
-        else { state.loopStartTime = null; loopImage(); }
+        startPlayLoop(clamped);
     }
 }
-function loopVideo() {
+function loopVideo(timestamp) {
     if(!state.isPlayingLoop) return;
+
     if(els.sourceVideo.currentTime >= state.endTime) {
+        if (state.pingPong && (state.endTime - state.startTime) > (2 / state.fps)) {
+            state.playDirection = -1;
+            els.sourceVideo.pause(); els.navVideo.pause();
+            reverseStepVideo();
+            return;
+        }
         els.sourceVideo.currentTime = state.startTime;
         els.navVideo.currentTime = state.startTime;
     }
@@ -2463,7 +2709,46 @@ function loopVideo() {
     }
     const pct = (els.sourceVideo.currentTime / state.videoDuration) * 100;
     els.playhead.style.left = `${pct}%`;
-    requestAnimationFrame(loopVideo);
+    state.animationFrameId = requestAnimationFrame(loopVideo);
+}
+
+// <video>はネイティブ逆再生ができないため、seek完了を待ちながら1コマずつ戻す。
+// 画面に表示されるnavVideoのみをシークし(非表示のsourceVideoは触らない)、
+// 逆再生のコマ数もPREVIEW_REVERSE_FPSで頭打ちにして体感のもたつきを抑える。
+function reverseStepVideo() {
+    if(!state.isPlayingLoop) return;
+
+    if (!state.pingPong) {
+        state.playDirection = 1;
+        els.sourceVideo.currentTime = state.startTime;
+        els.sourceVideo.play(); els.navVideo.play();
+        state.animationFrameId = requestAnimationFrame(loopVideo);
+        return;
+    }
+
+    const step = 1 / Math.min(state.fps, APP_CONFIG.PREVIEW_REVERSE_FPS);
+    let t = els.navVideo.currentTime - step;
+
+    if (t <= state.startTime) {
+        state.playDirection = 1;
+        t = state.startTime;
+        els.navVideo.currentTime = t;
+        els.sourceVideo.currentTime = t;
+        els.sourceVideo.play(); els.navVideo.play();
+        state.animationFrameId = requestAnimationFrame(loopVideo);
+        return;
+    }
+
+    const startedAt = performance.now();
+    const onSeeked = () => {
+        els.navVideo.removeEventListener('seeked', onSeeked);
+        if(!state.isPlayingLoop) return;
+        els.playhead.style.left = `${(t / state.videoDuration) * 100}%`;
+        const wait = Math.max(0, step * 1000 - (performance.now() - startedAt));
+        state.reverseTimerId = setTimeout(reverseStepVideo, wait);
+    };
+    els.navVideo.addEventListener('seeked', onSeeked);
+    els.navVideo.currentTime = t;
 }
 function loopImage(timestamp) {
     if(!state.isPlayingLoop) return;
@@ -2472,8 +2757,17 @@ function loopImage(timestamp) {
 
     const elapsed = timestamp - state.loopStartTime;
     const frameDuration = 1000 / state.fps;
-    let currentFrame = Math.floor(elapsed / frameDuration) % state.totalFrames;
-    let index = Math.floor(currentFrame * (state.images.length / state.totalFrames));
+
+    let logicalIdx;
+    if (state.pingPong && state.totalFrames > 2) {
+        const cycleLength = (state.totalFrames - 1) * 2;
+        const pos = Math.floor(elapsed / frameDuration) % cycleLength;
+        logicalIdx = pos < state.totalFrames ? pos : cycleLength - pos;
+    } else {
+        logicalIdx = Math.floor(elapsed / frameDuration) % state.totalFrames;
+    }
+
+    let index = Math.floor(logicalIdx * (state.images.length / state.totalFrames));
     index = Math.min(index, state.images.length - 1);
 
     if(state.images[index]) {
@@ -2562,17 +2856,29 @@ const stampGenerator = {
 
             if(state.mode === 'video') {
                 const step = 1 / state.fps; 
-                const duration = state.endTime - state.startTime;
-                let t = state.startTime;
-                let frameCount = 0;
 
+                const forwardTimes = [];
+                for (let i = 0; i < state.totalFrames; i++) {
+                    const t = state.startTime + i * step;
+                    if (t >= state.endTime) break;
+                    forwardTimes.push(t);
+                }
+
+                const captureTimes = forwardTimes.slice();
+                if (state.pingPong && forwardTimes.length > 2) {
+                    for (let i = forwardTimes.length - 2; i > 0; i--) {
+                        captureTimes.push(forwardTimes[i]);
+                    }
+                }
+
+                let idx = 0;
                 const processVideoFrame = async () => {
                     if (signal.aborted) return;
-                    if(t >= state.endTime || frameCount >= state.totalFrames) {
+                    if (idx >= captureTimes.length) {
                         gif.render(); return;
                     }
 
-                    els.sourceVideo.currentTime = t;
+                    els.sourceVideo.currentTime = captureTimes[idx];
                     try {
                         await new Promise(r => {
                             const h = () => { els.sourceVideo.removeEventListener('seeked', h); r(); };
@@ -2584,9 +2890,9 @@ const stampGenerator = {
                     if (signal.aborted) return;
                     draw(els.sourceVideo);
                     gif.addFrame(ctx, { copy: true, delay: step * 1000 });
-                    
-                    if(onProgress) onProgress((t - state.startTime) / duration);
-                    t += step; frameCount++;
+
+                    idx++;
+                    if(onProgress) onProgress(idx / captureTimes.length);
                     setTimeout(processVideoFrame, 0);
                 };
                 processVideoFrame();
@@ -2636,19 +2942,118 @@ const stampGenerator = {
     }
 };
 
+function hexToRgba(hex, alpha) {
+const h = hex.replace('#', '');
+const r = parseInt(h.substring(0, 2), 16);
+const g = parseInt(h.substring(2, 4), 16);
+const b = parseInt(h.substring(4, 6), 16);
+return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function resetGenerateButtonStyle() {
+    const config = APP_CONFIG.PLATFORMS[state.platformMode];
+    els.generateBtnText.innerText = "CREATE STAMP";
+    els.generateBtn.style.backgroundColor = config.color;
+    els.generateBtn.style.color = config.textColor;
+    els.btnProgress.style.width = '0%';
+}
+
+// Runs a single GIF generation pass and resolves with { blob, dims }.
+// startPct lets a retry pass begin partway up the bar instead of snapping back to 0%.
+// Resolves with { cancelled: true } if the user cancels mid-generation,
+// or null if generation failed.
+function runSingleGeneration(startPct) {
+    const basePct = typeof startPct === 'number' ? startPct : 0;
+    return new Promise((resolve) => {
+        toggleUILock(true);
+        els.generateBtnText.innerText = `CANCEL (${basePct}%)`;
+        els.generateBtn.style.backgroundColor = '#27272a';
+        els.generateBtn.style.color = '#ffffff';
+        els.btnProgress.style.backgroundColor = hexToRgba(APP_CONFIG.PLATFORMS[state.platformMode].color, 0.35);
+        els.btnProgress.style.width = basePct + '%';
+
+        stampGenerator.start(
+            (pct) => {
+                const percent = Math.round(basePct + pct * (100 - basePct));
+                els.btnProgress.style.width = percent + '%';
+                els.generateBtnText.innerText = `CANCEL (${percent}%)`;
+            },
+            (blob, dims) => resolve({ blob, dims }),
+            (err) => {
+                console.error(err);
+                resolve(null);
+            }
+        );
+
+        if (stampGenerator.abortController) {
+            stampGenerator.abortController.signal.addEventListener('abort', () => resolve({ cancelled: true }), { once: true });
+        }
+    });
+}
+
+// プラットフォーム上限サイズを超えないよう、サイズ/フレーム数を段階的に落として再生成する
+async function generateStampWithAutoFit() {
+    const isRestricted = state.platformMode !== 'free';
+    const maxBytes = APP_CONFIG.MAX_FILE_SIZE_MB * 1024 * 1024;
+
+    let result = await runSingleGeneration(0);
+    if (!result) {
+        toggleUILock(false);
+        resetGenerateButtonStyle();
+        showToast("エラーが発生しました", true);
+        return;
+    }
+    if (result.cancelled) return;
+
+    if (isRestricted) {
+        let attempt = 0;
+        while (result.blob.size > maxBytes && attempt < APP_CONFIG.AUTO_FIT_MAX_ATTEMPTS) {
+            attempt++;
+            let adjusted = false;
+
+            const currentSize = parseInt(els.sizeInput.value) || result.dims.width;
+            if (currentSize > APP_CONFIG.AUTO_FIT_MIN_SIZE) {
+                const nextSize = Math.max(APP_CONFIG.AUTO_FIT_MIN_SIZE, Math.floor(currentSize * APP_CONFIG.AUTO_FIT_SIZE_STEP));
+                if (nextSize < currentSize) {
+                    els.sizeInput.value = nextSize;
+                    adjusted = true;
+                }
+            }
+
+            if (!adjusted && state.totalFrames > APP_CONFIG.AUTO_FIT_MIN_FRAMES) {
+                const nextFrames = Math.max(APP_CONFIG.AUTO_FIT_MIN_FRAMES, Math.floor(state.totalFrames * APP_CONFIG.AUTO_FIT_SIZE_STEP));
+                if (nextFrames < state.totalFrames) {
+                    els.framesInput.value = nextFrames;
+                    updateConfig('frames');
+                    adjusted = true;
+                }
+            }
+
+            if (!adjusted) break;
+
+            showToast(`上限サイズ超過のため自動調整して再生成中... (${attempt}/${APP_CONFIG.AUTO_FIT_MAX_ATTEMPTS})`);
+            result = await runSingleGeneration(APP_CONFIG.AUTO_FIT_RETRY_DIP_PCT);
+            if (!result) {
+                toggleUILock(false);
+                resetGenerateButtonStyle();
+                showToast("エラーが発生しました", true);
+                return;
+            }
+            if (result.cancelled) return;
+        }
+    }
+
+    toggleUILock(false);
+    resetGenerateButtonStyle();
+    handleGenerationSuccess(result.blob, result.dims);
+}
+
 els.generateBtn.addEventListener('click', () => {
     // 1. Cancel Action
     if (stampGenerator.isGenerating) {
         stampGenerator.cancel();
         toggleUILock(false);
-        
-        // Reset Button Style
-        const config = APP_CONFIG.PLATFORMS[state.platformMode];
-        els.generateBtnText.innerText = "CREATE STAMP";
-        els.generateBtn.style.backgroundColor = config.color;
-        els.generateBtn.style.color = config.textColor;
-        els.btnProgress.style.width = '0%';
-        
+        resetGenerateButtonStyle();
         showToast("キャンセルされました");
         return;
     }
@@ -2658,52 +3063,7 @@ els.generateBtn.addEventListener('click', () => {
     if(state.isPlayingLoop) togglePlayLoop();
     clearQualityPreview();
 
-    // UI Updates (Start Progress)
-    toggleUILock(true);
-    els.generateBtnText.innerText = "CANCEL (0%)";
-    
-    // ボタン背景を暗くし、プログレスバーをテーマカラーにする
-    els.generateBtn.style.backgroundColor = '#27272a'; // Dark Gray Background
-    els.generateBtn.style.color = '#ffffff';
-    els.btnProgress.style.backgroundColor = APP_CONFIG.PLATFORMS[state.platformMode].color; // Theme Color Progress
-    els.btnProgress.style.width = '0%';
-
-    // Start Generation
-    stampGenerator.start(
-        // Progress
-        (pct) => {
-            const percent = Math.round(pct * 100);
-            els.btnProgress.style.width = percent + '%';
-            els.generateBtnText.innerText = `CANCEL (${percent}%)`;
-        },
-        // Complete
-        (blob, dims) => {
-            toggleUILock(false);
-            
-            // Reset Button Style
-            const config = APP_CONFIG.PLATFORMS[state.platformMode];
-            els.generateBtnText.innerText = "CREATE STAMP";
-            els.generateBtn.style.backgroundColor = config.color;
-            els.generateBtn.style.color = config.textColor;
-            els.btnProgress.style.width = '0%';
-            
-            handleGenerationSuccess(blob, dims);
-        },
-        // Error
-        (err) => {
-            console.error(err);
-            toggleUILock(false);
-            
-            // Reset Button Style
-            const config = APP_CONFIG.PLATFORMS[state.platformMode];
-            els.generateBtnText.innerText = "CREATE STAMP";
-            els.generateBtn.style.backgroundColor = config.color;
-            els.generateBtn.style.color = config.textColor;
-            els.btnProgress.style.width = '0%';
-            
-            showToast("エラーが発生しました", true);
-        }
-    );
+    generateStampWithAutoFit();
 });
 
 function handleGenerationSuccess(blob, dims) {
@@ -2714,6 +3074,7 @@ function handleGenerationSuccess(blob, dims) {
     const sizeClass = isOverSize ? 'text-red-500 font-bold' : 'text-gray-500';
     const btnStyle = isOverSize ? 'background-color: #dc2626; color: #fff;' : `background-color: ${APP_CONFIG.PLATFORMS[state.platformMode].color}; color: ${APP_CONFIG.PLATFORMS[state.platformMode].textColor};`;
     const btnText = isOverSize ? `OVER ${APP_CONFIG.MAX_FILE_SIZE_MB}MB` : 'DL';
+    const gifFileName = generateGifFileName();
 
     const div = document.createElement('div');
     div.className = "flex items-center gap-3 bg-[#1f1f23] p-2 rounded-lg border border-[#333] mb-2 group relative";
@@ -2722,6 +3083,7 @@ function handleGenerationSuccess(blob, dims) {
     delBtn.className = "absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-md";
     delBtn.innerHTML = "×";
     delBtn.onclick = () => {
+        if (els.stampPreviewImage.src === url) closeStampPreview();
         resourceManager.revoke(url);
         div.remove();
         if(els.resultList.children.length === 0) {
@@ -2734,14 +3096,18 @@ function handleGenerationSuccess(blob, dims) {
     };
 
     div.innerHTML = `
-    <img src="${url}" class="w-10 h-10 rounded bg-black/50">
+    <img src="${url}" class="w-10 h-10 rounded bg-black/50 cursor-pointer stamp-thumb" data-help="クリックで拡大プレビューを表示します。">
     <div class="flex-1 min-w-0">
     <div class="text-xs font-bold text-white">Stamp (${dims.width}x${dims.height})</div>
     <div class="text-[10px] ${sizeClass}">${sizeText}</div>
     </div>
-    <a href="${url}" download="stamp.gif" class="text-xs px-2 py-1 rounded text-center min-w-[50px] hover:brightness-110" style="${btnStyle}">${btnText}</a>
+    <a href="${url}" download="${gifFileName}" class="text-xs px-2 py-1 rounded text-center min-w-[50px] hover:brightness-110" style="${btnStyle}">${btnText}</a>
     `;
     div.appendChild(delBtn);
+
+    div.querySelector('.stamp-thumb').addEventListener('click', () => {
+        openStampPreview(url, gifFileName, dims, sizeText);
+    });
 
     if (els.qualityPreviewImage.src) resourceManager.revoke(els.qualityPreviewImage.src);
 
@@ -2753,6 +3119,20 @@ function handleGenerationSuccess(blob, dims) {
     if(isOverSize) showToast(`注意: ファイルサイズが ${APP_CONFIG.MAX_FILE_SIZE_MB}MB を超えています`, true);
     else showToast("生成完了!");
 }
+
+function openStampPreview(url, fileName, dims, sizeText) {
+    els.stampPreviewImage.src = url;
+    els.stampPreviewMetaText.innerText = `${dims.width}x${dims.height} ・ ${sizeText}`;
+    els.stampPreviewDownload.href = url;
+    els.stampPreviewDownload.download = fileName;
+    els.stampPreviewModal.classList.remove('hidden');
+}
+function closeStampPreview() {
+    els.stampPreviewModal.classList.add('hidden');
+    els.stampPreviewImage.src = '';
+}
+els.stampPreviewCloseBtn.addEventListener('click', closeStampPreview);
+els.stampPreviewBackdrop.addEventListener('click', closeStampPreview);
 
 function showToast(msg, isError = false) {
 const t = document.getElementById('toast'); 
@@ -2783,6 +3163,11 @@ els.undoBtn.addEventListener('click', () => historyManager.undo());
 els.redoBtn.addEventListener('click', () => historyManager.redo());
 
 window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.stampPreviewModal.classList.contains('hidden')) {
+        closeStampPreview();
+        return;
+    }
+
     const target = e.target;
     const isInput = target.tagName === 'INPUT' || 
                     target.tagName === 'TEXTAREA' || 
